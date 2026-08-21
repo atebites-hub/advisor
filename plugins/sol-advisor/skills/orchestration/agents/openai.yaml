@@ -1,4 +1,4 @@
 interface:
   display_name: "Sol Advisor Orchestration"
-  short_description: "Sol / Ultra judgment and review with Luna / High children"
-  default_prompt: "Use $orchestration to declare a solo, delegate, or audit route before task tools; keep judgment and final review in Sol / Ultra."
+  short_description: "Automatic Sol / Ultra judgment and review with Luna / High children"
+  default_prompt: "Build and verify this task with automatic solo, delegate, or audit routing; keep judgment and final review in Sol / Ultra."

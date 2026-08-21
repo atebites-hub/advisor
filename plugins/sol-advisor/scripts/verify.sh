@@ -252,14 +252,19 @@ assert_spawn_denied "malformed JSON" 'not-json'
 pass "plugin-wide spawn guard allows only the exact fresh Luna subagent contract"
 
 jq empty "$manifest"
-[ "$(jq -r '.version' "$manifest")" = 0.7.0 ] || fail "manifest version is not 0.7.0"
+[ "$(jq -r '.version' "$manifest")" = 0.7.1 ] || fail "manifest version is not 0.7.1"
 grep -Fq 'Sol / Ultra' "$manifest" || fail "manifest omits Sol / Ultra"
 grep -Fq 'Luna / High' "$manifest" || fail "manifest omits Luna / High"
 grep -Fiq 'solo is the default' "$manifest" || fail "manifest omits solo default"
 grep -Fq 'delegate uses' "$manifest" || fail "manifest omits delegate contract"
 grep -Fq 'audit keeps the verdict in the primary task' "$manifest" || fail "manifest omits audit contract"
 grep -Fq 'denies supported child spawns' "$manifest" || fail "manifest omits spawn guard"
-pass "manifest JSON and v0.7.0 Sol / Ultra and Luna / High release language"
+grep -Fq 'automatically activates in every fresh task' "$manifest" ||
+  fail "manifest omits automatic activation"
+if grep -Fq '$sol-advisor:orchestration' "$manifest"; then
+  fail "manifest still requires explicit orchestration invocation"
+fi
+pass "manifest JSON and v0.7.1 automatic Sol / Ultra and Luna / High release language"
 
 python3 - "$templates" <<'PY'
 from pathlib import Path
@@ -504,6 +509,14 @@ grep -Fq 'codex plugin marketplace add' "$readme" || fail "README omits marketpl
 grep -Fq 'codex plugin add' "$readme" || fail "README omits plugin quick start"
 grep -Fq 'scripts/install-agents.sh' "$readme" || fail "README omits companion install"
 grep -Fq '/hooks' "$readme" || fail "README omits hook trust"
+grep -Fq 'automatically loads the orchestration contract' "$readme" ||
+  fail "README omits automatic activation"
+grep -Fq 'SessionStart' "$operations" || fail "operations omit SessionStart activation"
+grep -Fq 'PreToolUse' "$operations" || fail "operations omit spawn enforcement"
+grep -Fq 'automatic' "$ui" || fail "UI copy omits automatic activation"
+if grep -Fq '$orchestration' "$ui"; then
+  fail "UI prompt still requires explicit orchestration invocation"
+fi
 grep -Fq '| `solo` |' "$readme" || fail "README route table omits solo"
 grep -Fq '| `delegate` |' "$readme" || fail "README route table omits delegate"
 grep -Fq '| `audit` |' "$readme" || fail "README route table omits audit"
@@ -595,4 +608,4 @@ sh -n "$runtime_inspector"
 sh -n "$script_dir/verify.sh"
 pass "shell syntax"
 
-printf '%s\n' "VERIFY PASSED: Sol Advisor v0.7.0 Sol / Ultra and Luna / High checks completed in $tmp_dir"
+printf '%s\n' "VERIFY PASSED: Sol Advisor v0.7.1 automatic Sol / Ultra and Luna / High checks completed in $tmp_dir"

@@ -24,8 +24,12 @@ byte-exact Sol Advisor profiles from older releases. It refuses modified, unsafe
 nonregular, symlinked, unreadable, or conflicting destinations without partial
 mutation and does not edit Codex configuration.
 
-After installation, open `/hooks`, review and trust the Sol Advisor hook, then start a
-fresh task. Until the hook is trusted, supported spawn calls are not enforced.
+After installation, open `/hooks`, review and trust the Sol Advisor lifecycle hooks,
+then start a fresh task on Sol / Ultra. The trusted `SessionStart` hook
+automatically loads the orchestration contract for ordinary prompts; no explicit skill
+invocation is required. The trusted `PreToolUse` hook enforces supported child spawns.
+Until the hooks are trusted, neither automatic activation nor spawn enforcement is
+active.
 
 | Mode | Use it when | Delivery |
 |---|---|---|

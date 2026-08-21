@@ -17,12 +17,17 @@ fork_turns: none
 
 Do not attach model or reasoning overrides.
 
-## Hook trust and boundary
+## Automatic activation, hook trust, and boundary
 
-The plugin's synchronous `PreToolUse` hook denies supported child spawns that do not
-use the exact contract above. Review and trust it through `/hooks` after installation
-or every hook definition change. Disabled, untrusted, failed, and specialized opt-out
-paths are not covered; runtime evidence remains required.
+The plugin's synchronous `SessionStart` hook emits the canonical orchestration
+`SKILL.md` as developer context on `startup`, `resume`, `clear`, and `compact`. The
+separate synchronous `PreToolUse` hook denies supported child spawns that do not use
+the exact contract above.
+
+Review and trust both lifecycle behaviors through `/hooks` after installation or every
+hook definition change, then start a fresh task. Disabled, untrusted, failed, and
+specialized opt-out paths are not covered; runtime evidence remains required. The
+hooks do not select or prove the primary task's reasoning effort.
 
 ## Installation and migration
 
@@ -99,6 +104,6 @@ git status --short
 git diff --stat
 ~~~
 
-The v0.7.0 verifier covers one role, hook fixtures, Luna / High runtime evidence,
-three routes, JSON/TOML validity, shell syntax, installer migration safety, and
-absence of retired workflow references.
+The v0.7.1 verifier covers automatic canonical `SessionStart` context, one role, spawn
+guard fixtures, Luna / High runtime evidence, three routes, JSON/TOML validity, shell
+syntax, installer migration safety, and absence of retired workflow references.
