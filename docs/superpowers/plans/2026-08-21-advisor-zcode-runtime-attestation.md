@@ -103,6 +103,7 @@ Expected: the maintained fork changes are attributable and the four fork-owned s
 
 ```sh
 bun install --frozen-lockfile
+bun run sync:locked
 bun test
 bun run typecheck
 bun run build
@@ -111,6 +112,8 @@ git diff --check
 ```
 
 Expected: upstream is green. If a current upstream command name differs, use the script present in its fetched `package.json` and record that exact change in the PR; do not skip the underlying test/typecheck/build check.
+
+`vendor/` is intentionally ignored and must be synchronized before runtime-backed tests. An exact-version local App may be used through `sync:local` for an early macOS check, but CI and fresh-origin acceptance use the committed lock through `sync:locked` or `release:build`.
 
 - [ ] **Step 3: Reapply the fork's existing behavior commit-by-commit**
 
@@ -134,7 +137,7 @@ bun run typecheck
 - [ ] **Step 4: Commit the green upstream merge**
 
 ```sh
-git add src/launcher.ts scripts/sync-runtime.ts test/launcher.test.ts test/sync-runtime.test.ts package.json bun.lock vendor
+git add src/launcher.ts scripts/sync-runtime.ts test/launcher.test.ts test/sync-runtime.test.ts package.json bun.lock
 git commit -m "chore: merge current ZCode upstream"
 ```
 
@@ -147,9 +150,8 @@ The exact staged file set may omit upstream-unchanged files, but must not includ
 **Files:**
 
 - Modify: `src/launcher.ts`
-- Modify: `config.example.json`
-- Modify: `docs/CONFIGURATION.md`
 - Test: `test/launcher.test.ts`
+- Test: `test/launcher-runtime.test.ts`
 
 **Internal interface:**
 
@@ -186,11 +188,12 @@ Add tests that prove:
 7. `ZCODE_ODW_PROTOCOL=1` sets route `odw`; normal invocation sets `native`.
 8. A partial strict route (model without effort or effort without model) fails.
 9. Reading Advisor plugin settings never rewrites the user's config or provider credentials.
+10. The current bundled runtime's plugin install/list smoke path remains green.
 
 Run:
 
 ```sh
-bun test test/launcher.test.ts
+bun test test/launcher.test.ts test/launcher-runtime.test.ts
 ```
 
 Expected: new tests fail because effort parsing and `prepareRuntimeOverrides()` do not exist.
@@ -213,23 +216,13 @@ modelConfig.mainThoughtLevel = reasoningEffort;
 
 Keep `prepareModelOverride()` as a compatibility wrapper that calls `prepareRuntimeOverrides()` and returns the existing shape. Do not add a routing class, registry, or dependency.
 
-- [ ] **Step 3: Document persistent native role settings**
-
-Add `mainThoughtLevel` and `liteThoughtLevel` to `config.example.json` beside `main` and `lite`. In `docs/CONFIGURATION.md` document:
-
-- `main`/`mainThoughtLevel` are the primary role,
-- `lite`/`liteThoughtLevel` are native subagent/lightweight work,
-- exact values must be supported by the selected model,
-- restored sessions retain their recorded tuple and require `/new` after configuration changes.
-- the enabled Advisor plugin's exact settings are an optional native role overlay for new sessions only; malformed, incomplete, disabled, or ambiguous plugin records do not alter ordinary ZCode behavior.
-
-- [ ] **Step 4: Run focused checks and commit**
+- [ ] **Step 3: Run focused checks and commit**
 
 ```sh
-bun test test/launcher.test.ts
+bun test test/launcher.test.ts test/launcher-runtime.test.ts
 bun run typecheck
 git diff --check
-git add src/launcher.ts test/launcher.test.ts config.example.json docs/CONFIGURATION.md
+git add src/launcher.ts test/launcher.test.ts test/launcher-runtime.test.ts
 git commit -m "feat: add exact runtime route overrides"
 ```
 
@@ -241,8 +234,11 @@ git commit -m "feat: add exact runtime route overrides"
 
 - Modify: `scripts/sync-runtime.ts`
 - Modify: `scripts/check-runtime.ts`
+- Modify: `config.example.json`
+- Modify: `docs/CONFIGURATION.md`
 - Test: `test/sync-runtime.test.ts`
-- Regenerate: `vendor/zcode.cjs`
+- Test: `test/launcher-runtime.test.ts`
+- Generate locally for verification (ignored): `vendor/zcode.cjs`
 
 - [ ] **Step 1: Add failing runtime-patch fixtures**
 
@@ -292,13 +288,21 @@ Add one save → change plugin settings → restore round trip against the real 
 
 Use strict unique anchors and a marker comment/string checked by `scripts/check-runtime.ts`. If the selected model's catalog does not expose the requested thought level, stop before a provider request with a stable error code/message.
 
+Only after the runtime recognizes both keys, add `mainThoughtLevel` and `liteThoughtLevel` to `config.example.json` beside `main` and `lite`. In `docs/CONFIGURATION.md` document:
+
+- `main`/`mainThoughtLevel` are the primary role,
+- `lite`/`liteThoughtLevel` are native subagent/lightweight work,
+- exact values must be supported by the selected model,
+- restored sessions retain their recorded tuple and require `/new` after configuration changes,
+- the enabled Advisor plugin's exact settings are an optional native role overlay for new sessions only; malformed, incomplete, disabled, or ambiguous plugin records do not alter ordinary ZCode behavior.
+
 - [ ] **Step 3: Regenerate and verify the vendored runtime**
 
 Run only in this isolated worktree:
 
 ```sh
 bun run sync:locked
-bun test test/sync-runtime.test.ts
+bun test test/sync-runtime.test.ts test/launcher-runtime.test.ts
 bun run check
 git diff --check
 ```
@@ -306,7 +310,7 @@ git diff --check
 - [ ] **Step 4: Commit**
 
 ```sh
-git add scripts/sync-runtime.ts scripts/check-runtime.ts test/sync-runtime.test.ts vendor/zcode.cjs vendor/extraction.json
+git add scripts/sync-runtime.ts scripts/check-runtime.ts test/sync-runtime.test.ts test/launcher-runtime.test.ts config.example.json docs/CONFIGURATION.md
 git commit -m "feat: apply exact runtime reasoning effort"
 ```
 
@@ -321,7 +325,7 @@ git commit -m "feat: apply exact runtime reasoning effort"
 - Modify: `scripts/check-runtime.ts`
 - Test: `test/launcher.test.ts`
 - Test: `test/sync-runtime.test.ts`
-- Regenerate: `vendor/zcode.cjs`
+- Generate locally for verification (ignored): `vendor/zcode.cjs`
 
 - [ ] **Step 1: Add failing attestation tests**
 
@@ -390,7 +394,7 @@ bun test test/launcher.test.ts test/sync-runtime.test.ts
 bun run typecheck
 bun run check
 git diff --check
-git add src/launcher.ts scripts/sync-runtime.ts scripts/check-runtime.ts test/launcher.test.ts test/sync-runtime.test.ts vendor/zcode.cjs vendor/extraction.json
+git add src/launcher.ts scripts/sync-runtime.ts scripts/check-runtime.ts test/launcher.test.ts test/sync-runtime.test.ts
 git commit -m "feat: attest resolved ZCode runtime routes"
 ```
 
@@ -479,6 +483,7 @@ From a fresh worktree at the resulting `origin/main`:
 
 ```sh
 bun install --frozen-lockfile
+bun run sync:locked
 bun test test/launcher.test.ts test/sync-runtime.test.ts
 bun run typecheck
 bun run build

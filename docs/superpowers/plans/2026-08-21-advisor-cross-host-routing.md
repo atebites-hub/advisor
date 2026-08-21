@@ -131,6 +131,7 @@ Create a clean worktree from the new `origin/main` and run:
 
 ```sh
 bun install --frozen-lockfile
+bun run sync:locked
 bun test test/launcher.test.ts test/sync-runtime.test.ts
 bun run typecheck
 bun run build
