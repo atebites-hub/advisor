@@ -13,7 +13,7 @@ fi
 payload=$(cat)
 if printf '%s\n' "$payload" | jq -e '
   .hook_event_name == "PreToolUse" and
-  (.tool_name == "collaborationspawn_agent" or .tool_name == "spawn_agent") and
+  (.tool_name == "collaborationspawn_agent" or .tool_name == "spawn_agent" or .tool_name == "Agent") and
   (.tool_input | type) == "object" and
   .tool_input.agent_type == "sol_advisor_luna_subagent" and
   .tool_input.fork_turns == "none" and

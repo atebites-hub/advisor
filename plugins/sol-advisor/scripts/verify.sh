@@ -268,6 +268,10 @@ allowed_collaboration_payload='{"hook_event_name":"PreToolUse","tool_name":"coll
 allowed_collaboration_output=$(run_spawn_guard "$allowed_collaboration_payload") || fail "compliant collaboration Luna spawn guard invocation failed"
 [ -z "$allowed_collaboration_output" ] || fail "compliant collaboration Luna spawn emitted unexpected output"
 
+allowed_agent_payload='{"hook_event_name":"PreToolUse","tool_name":"Agent","tool_input":{"agent_type":"sol_advisor_luna_subagent","fork_turns":"none","mode":"code","task_name":"fixture","message":"bounded fixture"}}'
+allowed_agent_output=$(run_spawn_guard "$allowed_agent_payload") || fail "compliant Agent alias guard invocation failed"
+[ -z "$allowed_agent_output" ] || fail "compliant Agent alias emitted unexpected output"
+
 assert_spawn_denied "missing role" '{"hook_event_name":"PreToolUse","tool_name":"spawn_agent","tool_input":{"fork_turns":"none"}}'
 assert_spawn_denied "built-in worker" '{"hook_event_name":"PreToolUse","tool_name":"spawn_agent","tool_input":{"agent_type":"worker","fork_turns":"none"}}'
 assert_spawn_denied "collaboration built-in worker" '{"hook_event_name":"PreToolUse","tool_name":"collaborationspawn_agent","tool_input":{"agent_type":"worker","fork_turns":"none"}}'
