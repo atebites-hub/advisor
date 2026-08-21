@@ -38,13 +38,13 @@ cleanup() {
 trap cleanup 0 HUP INT TERM
 tmp_dir=$(mktemp -d "$tmp_base/sol-advisor-verify.XXXXXX") || fail "could not create disposable verification directory"
 
-luna_file=sol-advisor-luna-implementer.toml
-terra_file=sol-advisor-terra-implementer.toml
-sol_file=sol-advisor-sol-reviewer.toml
-legacy_luna_sha256=fba1b42849d93737e83b094a2ab0b1611f87ac37db7438c8bbdf581f0813f8eb
-legacy_terra_sha256=4425a8c1f21ce8c6af93f96adc253bbc33ea301f1389b3fa8ce350be08584eca
-legacy_luna_v050_sha256=5cfaf77f14757074ca5d3cfecd0b8204c91dc14eff8d6119985c64416ddf4853
-legacy_terra_v050_sha256=dc329fe87f6f6610c13157ec16432f91c79cf5a541ee3e7448f6afb165dd18ce
+current_file=sol-advisor-luna-subagent.toml
+retired_luna_file=sol-advisor-luna-implementer.toml
+retired_terra_file=sol-advisor-terra-implementer.toml
+retired_sol_file=sol-advisor-sol-reviewer.toml
+retired_luna_sha256s='fba1b42849d93737e83b094a2ab0b1611f87ac37db7438c8bbdf581f0813f8eb 5cfaf77f14757074ca5d3cfecd0b8204c91dc14eff8d6119985c64416ddf4853 12fa9180a292876e6731bc325779123bcd931c3caa902fbf90d676a31833be84'
+retired_terra_sha256s='4425a8c1f21ce8c6af93f96adc253bbc33ea301f1389b3fa8ce350be08584eca 06c318e5e93f37452635906394e6ea69fb6a65ba9e6ad7172d37b444e0dc871d dc329fe87f6f6610c13157ec16432f91c79cf5a541ee3e7448f6afb165dd18ce 77ed2f36bb149da5d9032230c3d6f5e5cd56b059b3fa5f59085249bba06e1f3a'
+retired_sol_sha256s='0333acf0ef562bcfebd06009ac09bd1dd8cbc04c4cf28e08e9e049bd8bf202d2'
 
 snapshot_files() {
   target=$1
@@ -66,7 +66,7 @@ snapshot_files() {
 write_legacy_roles() {
   target=$1
   mkdir -p "$target"
-  cat > "$target/$luna_file" <<'LEGACY_LUNA'
+  cat > "$target/$retired_luna_file" <<'LEGACY_LUNA'
 name = "sol_advisor_luna_implementer"
 description = "Sol Advisor's routine implementation lane for bounded, fully specified work."
 model = "gpt-5.6-luna"
@@ -84,7 +84,7 @@ report actual evidence. Do not silently substitute a different role, model, or
 reasoning level; this installed custom-agent profile is the required routine lane.
 """
 LEGACY_LUNA
-  cat > "$target/$terra_file" <<'LEGACY_TERRA'
+  cat > "$target/$retired_terra_file" <<'LEGACY_TERRA'
 name = "sol_advisor_terra_implementer"
 description = "Sol Advisor's complex implementation lane for context-heavy or higher-risk work."
 model = "gpt-5.6-terra"
@@ -103,15 +103,15 @@ actual evidence. Do not silently substitute a different role, model, or reasonin
 level; this installed custom-agent profile is the required complex lane.
 """
 LEGACY_TERRA
-  cp "$templates/$sol_file" "$target/$sol_file"
-  [ "$(shasum -a 256 "$target/$luna_file" | awk '{print $1}')" = "$legacy_luna_sha256" ] || fail "legacy Luna fixture digest drifted"
-  [ "$(shasum -a 256 "$target/$terra_file" | awk '{print $1}')" = "$legacy_terra_sha256" ] || fail "legacy Terra fixture digest drifted"
+  [ "$(shasum -a 256 "$target/$retired_luna_file" | awk '{print $1}')" = "fba1b42849d93737e83b094a2ab0b1611f87ac37db7438c8bbdf581f0813f8eb" ] || fail "legacy Luna fixture digest drifted"
+  [ "$(shasum -a 256 "$target/$retired_terra_file" | awk '{print $1}')" = "4425a8c1f21ce8c6af93f96adc253bbc33ea301f1389b3fa8ce350be08584eca" ] || fail "legacy Terra fixture digest drifted"
+  write_retired_sol "$target"
 }
 
 write_v050_roles() {
   target=$1
   mkdir -p "$target"
-  cat > "$target/$luna_file" <<'V050_LUNA'
+  cat > "$target/$retired_luna_file" <<'V050_LUNA'
 name = "sol_advisor_luna_implementer"
 description = "Sol Advisor's default routine implementation lane for bounded, fully specified work."
 model = "gpt-5.6-luna"
@@ -132,7 +132,7 @@ it to Terra / High. Do not silently substitute a different role, model, or reaso
 level; this installed custom-agent profile is the required routine lane.
 """
 V050_LUNA
-  cat > "$target/$terra_file" <<'V050_TERRA'
+  cat > "$target/$retired_terra_file" <<'V050_TERRA'
 name = "sol_advisor_terra_implementer"
 description = "Sol Advisor's explicit high-complexity escalation lane for judgment-heavy or high-risk work."
 model = "gpt-5.6-terra"
@@ -153,9 +153,34 @@ report actual evidence. Do not silently substitute a different role, model, or
 reasoning level; this installed custom-agent profile is the required escalation lane.
 """
 V050_TERRA
-  cp "$templates/$sol_file" "$target/$sol_file"
-  [ "$(shasum -a 256 "$target/$luna_file" | awk '{print $1}')" = "$legacy_luna_v050_sha256" ] || fail "v0.5.0 Luna fixture digest drifted"
-  [ "$(shasum -a 256 "$target/$terra_file" | awk '{print $1}')" = "$legacy_terra_v050_sha256" ] || fail "v0.5.0 Terra fixture digest drifted"
+  [ "$(shasum -a 256 "$target/$retired_luna_file" | awk '{print $1}')" = "5cfaf77f14757074ca5d3cfecd0b8204c91dc14eff8d6119985c64416ddf4853" ] || fail "v0.5.0 Luna fixture digest drifted"
+  [ "$(shasum -a 256 "$target/$retired_terra_file" | awk '{print $1}')" = "dc329fe87f6f6610c13157ec16432f91c79cf5a541ee3e7448f6afb165dd18ce" ] || fail "v0.5.0 Terra fixture digest drifted"
+  write_retired_sol "$target"
+}
+
+write_retired_sol() {
+  target=$1
+  cat > "$target/$retired_sol_file" <<'RETIRED_SOL'
+name = "sol_advisor_sol_reviewer"
+description = "Sol Advisor's fresh, read-only final review lane for inspected diffs and evidence."
+model = "gpt-5.6-sol"
+model_reasoning_effort = "high"
+sandbox_mode = "read-only"
+
+developer_instructions = """
+You are Sol Advisor's fresh final reviewer. Remain strictly read-only: do not create,
+modify, delete, format, or implement files, and do not broaden the requested scope.
+Inspect the actual files, accumulated change set, stated interfaces and constraints,
+and verification evidence in a fresh context.
+
+Return exactly one verdict: ship, fix-first, or rethink. Base the verdict on concrete,
+evidence-backed findings. Use fix-first only for bounded required corrections and
+rethink when the architecture or scope must change. Do not silently substitute a
+different role, model, or reasoning level; this installed custom-agent profile is the
+required read-only review lane.
+"""
+RETIRED_SOL
+  [ "$(shasum -a 256 "$target/$retired_sol_file" | awk '{print $1}')" = "$retired_sol_sha256s" ] || fail "retired Sol fixture digest drifted"
 }
 
 for required in "$installer" "$runtime_inspector" "$manifest" "$skill" "$contracts" "$operations" "$readme" "$ui" "$hooks_config" "$spawn_guard"; do
@@ -219,21 +244,10 @@ import tomllib
 
 root = Path(sys.argv[1])
 expected = {
-    "sol-advisor-luna-implementer.toml": {
-        "name": "sol_advisor_luna_implementer",
+    "sol-advisor-luna-subagent.toml": {
+        "name": "sol_advisor_luna_subagent",
         "model": "gpt-5.6-luna",
-        "model_reasoning_effort": "max",
-    },
-    "sol-advisor-terra-implementer.toml": {
-        "name": "sol_advisor_terra_implementer",
-        "model": "gpt-5.6-terra",
         "model_reasoning_effort": "high",
-    },
-    "sol-advisor-sol-reviewer.toml": {
-        "name": "sol_advisor_sol_reviewer",
-        "model": "gpt-5.6-sol",
-        "model_reasoning_effort": "high",
-        "sandbox_mode": "read-only",
     },
 }
 actual = {path.name for path in root.glob("*.toml")}
@@ -247,146 +261,93 @@ for filename, pins in expected.items():
     for field, value in pins.items():
         if data.get(field) != value:
             raise SystemExit(f"{filename}: {field}={data.get(field)!r}, expected {value!r}")
-print("three exact role pins are valid")
+    instructions = data["developer_instructions"].lower()
+    for phrase in ("do not perform final review", "do not spawn subagents"):
+        if phrase not in instructions:
+            raise SystemExit(f"{filename}: missing invariant {phrase!r}")
+print("one exact Luna / High subagent role is valid")
 PY
-pass "exact three-role TOML inventory"
+pass "exact one-role TOML inventory"
 
-grep -Fq "legacy_luna_sha256=$legacy_luna_sha256" "$installer" || fail "installer legacy Luna digest mismatch"
-grep -Fq "legacy_terra_sha256=$legacy_terra_sha256" "$installer" || fail "installer legacy Terra digest mismatch"
-grep -Fq "legacy_luna_v050_sha256=$legacy_luna_v050_sha256" "$installer" || fail "installer v0.5.0 Luna digest mismatch"
-grep -Fq "legacy_terra_v050_sha256=$legacy_terra_v050_sha256" "$installer" || fail "installer v0.5.0 Terra digest mismatch"
+grep -Fq "retired_luna_sha256s='$retired_luna_sha256s'" "$installer" || fail "installer retired Luna digest set mismatch"
+grep -Fq "retired_terra_sha256s='$retired_terra_sha256s'" "$installer" || fail "installer retired Terra digest set mismatch"
+grep -Fq "retired_sol_sha256s='$retired_sol_sha256s'" "$installer" || fail "installer retired Sol digest set mismatch"
 pass "immutable historical migration fingerprints"
+
+assert_only_current_profile() {
+  target=$1
+  cmp -s "$templates/$current_file" "$target/$current_file" || fail "current Luna subagent mismatch: $target"
+  for retired_file in "$retired_luna_file" "$retired_terra_file" "$retired_sol_file"; do
+    test ! -e "$target/$retired_file" && test ! -L "$target/$retired_file" || fail "retired profile remains: $target/$retired_file"
+  done
+}
 
 clean_target=$tmp_dir/clean
 sh "$installer" --target-dir "$clean_target"
-for role in "$luna_file" "$terra_file" "$sol_file"; do
-  cmp -s "$templates/$role" "$clean_target/$role" || fail "clean install mismatch: $role"
-done
+assert_only_current_profile "$clean_target"
 sh "$installer" --target-dir "$clean_target" --check
+sh "$installer" --target-dir "$clean_target" --check --check-role luna
 before=$(snapshot_files "$clean_target")
 sh "$installer" --target-dir "$clean_target"
 after=$(snapshot_files "$clean_target")
-[ "$before" = "$after" ] || fail "idempotent install changed current roles"
-pass "clean install, exact check, and idempotence"
+[ "$before" = "$after" ] || fail "idempotent install changed current state"
 
-selective_target=$tmp_dir/selective
-sh "$installer" --target-dir "$selective_target"
-printf '%s\n' modified >> "$selective_target/$terra_file"
-before=$(snapshot_files "$selective_target")
-sh "$installer" --target-dir "$selective_target" --check --check-role luna --check-role sol
-after=$(snapshot_files "$selective_target")
-[ "$before" = "$after" ] || fail "selective Luna/Sol check mutated conflicting Terra target"
-if sh "$installer" --target-dir "$selective_target" --check --check-role terra >/dev/null 2>&1; then
-  fail "selective Terra check accepted conflicting Terra target"
-fi
-after=$(snapshot_files "$selective_target")
-[ "$before" = "$after" ] || fail "selective Terra refusal mutated target"
-if sh "$installer" --target-dir "$selective_target" --check >/dev/null 2>&1; then
-  fail "all-role --check accepted conflicting Terra target"
-fi
-if sh "$installer" --target-dir "$selective_target" --check-role >/dev/null 2>&1; then
-  fail "missing --check-role argument was accepted"
-fi
-if sh "$installer" --target-dir "$selective_target" --check-role unknown >/dev/null 2>&1; then
-  fail "unknown --check-role argument was accepted"
-fi
-after=$(snapshot_files "$selective_target")
-[ "$before" = "$after" ] || fail "invalid selective check mutated target"
-pass "selective Luna/Sol check, Terra refusal, all-role compatibility, and invalid-role refusal"
-
-upfront_terra_target=$tmp_dir/upfront-terra
-sh "$installer" --target-dir "$upfront_terra_target"
-printf '%s\n' modified >> "$upfront_terra_target/$luna_file"
-before=$(snapshot_files "$upfront_terra_target")
-sh "$installer" --target-dir "$upfront_terra_target" --check --check-role terra --check-role sol
-after=$(snapshot_files "$upfront_terra_target")
-[ "$before" = "$after" ] || fail "selective Terra/Sol check mutated conflicting Luna target"
-if sh "$installer" --target-dir "$upfront_terra_target" --check --check-role luna >/dev/null 2>&1; then
-  fail "selective Luna check accepted conflicting Luna target"
-fi
-after=$(snapshot_files "$upfront_terra_target")
-[ "$before" = "$after" ] || fail "selective Luna refusal mutated target"
-if sh "$installer" --target-dir "$upfront_terra_target" --check >/dev/null 2>&1; then
-  fail "all-role --check accepted conflicting Luna target"
-fi
-after=$(snapshot_files "$upfront_terra_target")
-[ "$before" = "$after" ] || fail "all-role Luna refusal mutated target"
-pass "selective Terra/Sol up-front path, Luna refusal, and all-role compatibility"
+for invalid_role in terra sol worker; do
+  if sh "$installer" --target-dir "$clean_target" --check-role "$invalid_role" >/dev/null 2>&1; then
+    fail "invalid role was accepted: $invalid_role"
+  fi
+done
+pass "clean install, exact checks, idempotence, and invalid-role refusal"
 
 missing_target=$tmp_dir/missing
 if sh "$installer" --target-dir "$missing_target" --check; then fail "--check accepted missing target"; fi
 test ! -e "$missing_target" || fail "--check mutated missing target"
 pass "missing-target check refusal is non-mutating"
 
+target_symlink=$tmp_dir/target-symlink
+mkdir "$tmp_dir/target-real"
+ln -s "$tmp_dir/target-real" "$target_symlink"
+before=$(snapshot_files "$tmp_dir/target-real")
+if sh "$installer" --target-dir "$target_symlink"; then fail "installer accepted symlinked target directory"; fi
+after=$(snapshot_files "$tmp_dir/target-real")
+[ "$before" = "$after" ] || fail "symlinked target refusal mutated target"
+pass "symlinked target-directory refusal is non-mutating"
+
 codex_home=$tmp_dir/codex-home
 CODEX_HOME="$codex_home" sh "$installer"
-for role in "$luna_file" "$terra_file" "$sol_file"; do
-  cmp -s "$templates/$role" "$codex_home/agents/$role" || fail "CODEX_HOME install mismatch: $role"
-done
+cmp -s "$templates/$current_file" "$codex_home/agents/$current_file" || fail "CODEX_HOME install mismatch"
 test ! -e "$codex_home/config.toml" || fail "installer created config.toml"
 relative_parent=$tmp_dir/relative-parent
 mkdir "$relative_parent"
 (cd "$relative_parent" && sh "$installer" --target-dir relative-agents)
-cmp -s "$templates/$luna_file" "$relative_parent/relative-agents/$luna_file" || fail "relative target Luna mismatch"
+cmp -s "$templates/$current_file" "$relative_parent/relative-agents/$current_file" || fail "relative target mismatch"
 pass "CODEX_HOME and relative target behavior"
 
 migration_target=$tmp_dir/migration
 write_legacy_roles "$migration_target"
 sh "$installer" --target-dir "$migration_target"
-for role in "$luna_file" "$terra_file" "$sol_file"; do
-  cmp -s "$templates/$role" "$migration_target/$role" || fail "historical migration mismatch: $role"
-done
-sh "$installer" --target-dir "$migration_target" --check
-pass "exact historical Luna/Terra migration"
+assert_only_current_profile "$migration_target"
+pass "exact historical migration"
 
 v050_migration_target=$tmp_dir/v050-migration
 write_v050_roles "$v050_migration_target"
 sh "$installer" --target-dir "$v050_migration_target"
-for role in "$luna_file" "$terra_file" "$sol_file"; do
-  cmp -s "$templates/$role" "$v050_migration_target/$role" || fail "v0.5.0 migration mismatch: $role"
-done
-sh "$installer" --target-dir "$v050_migration_target" --check
-pass "exact v0.5.0 Luna/Terra migration"
+assert_only_current_profile "$v050_migration_target"
+pass "exact v0.5.0 migration"
 
-modified_v050_luna=$tmp_dir/modified-v050-luna
-write_v050_roles "$modified_v050_luna"
-printf 'X' >> "$modified_v050_luna/$luna_file"
-before=$(snapshot_files "$modified_v050_luna")
-if sh "$installer" --target-dir "$modified_v050_luna"; then fail "installer replaced modified v0.5.0 Luna"; fi
-after=$(snapshot_files "$modified_v050_luna")
-[ "$before" = "$after" ] || fail "modified v0.5.0 Luna refusal partially mutated target"
-pass "modified v0.5.0 Luna refusal with zero partial mutation"
-
-modified_v050_terra=$tmp_dir/modified-v050-terra
-write_v050_roles "$modified_v050_terra"
-printf 'X' >> "$modified_v050_terra/$terra_file"
-before=$(snapshot_files "$modified_v050_terra")
-if sh "$installer" --target-dir "$modified_v050_terra"; then fail "installer replaced modified v0.5.0 Terra"; fi
-after=$(snapshot_files "$modified_v050_terra")
-[ "$before" = "$after" ] || fail "modified v0.5.0 Terra refusal partially mutated target"
-pass "modified v0.5.0 Terra refusal with zero partial mutation"
-
-modified_luna=$tmp_dir/modified-luna
-write_legacy_roles "$modified_luna"
-printf '%s\n' modified >> "$modified_luna/$luna_file"
-before=$(snapshot_files "$modified_luna")
-if sh "$installer" --target-dir "$modified_luna"; then fail "installer replaced modified Luna"; fi
-after=$(snapshot_files "$modified_luna")
-[ "$before" = "$after" ] || fail "modified-Luna refusal partially mutated target"
-pass "modified Luna refusal with zero partial mutation"
-
-modified_terra=$tmp_dir/modified-terra
-write_legacy_roles "$modified_terra"
-printf '%s\n' modified >> "$modified_terra/$terra_file"
-before=$(snapshot_files "$modified_terra")
-if sh "$installer" --target-dir "$modified_terra"; then fail "installer replaced modified Terra"; fi
-after=$(snapshot_files "$modified_terra")
-[ "$before" = "$after" ] || fail "modified-Terra refusal partially mutated target"
-pass "differing legacy Terra refusal with zero partial mutation"
+modified_retired=$tmp_dir/modified-retired
+write_v050_roles "$modified_retired"
+printf '%s\n' modified >> "$modified_retired/$retired_terra_file"
+before=$(snapshot_files "$modified_retired")
+if sh "$installer" --target-dir "$modified_retired"; then fail "installer removed modified retired profile"; fi
+after=$(snapshot_files "$modified_retired")
+[ "$before" = "$after" ] || fail "modified retired refusal partially mutated target"
+test ! -e "$modified_retired/$current_file" || fail "modified retired refusal installed the new profile"
+pass "modified retired refusal with zero partial mutation"
 
 modified_current=$tmp_dir/modified-current
 sh "$installer" --target-dir "$modified_current"
-printf '%s\n' modified >> "$modified_current/$luna_file"
+printf '%s\n' modified >> "$modified_current/$current_file"
 before=$(snapshot_files "$modified_current")
 if sh "$installer" --target-dir "$modified_current"; then fail "installer replaced modified current Luna"; fi
 after=$(snapshot_files "$modified_current")
@@ -395,14 +356,27 @@ pass "modified current-role refusal with zero partial mutation"
 
 unsafe=$tmp_dir/unsafe
 mkdir "$unsafe"
-ln -s "$templates/$luna_file" "$unsafe/$luna_file"
+ln -s "$templates/$current_file" "$unsafe/$retired_luna_file"
 before=$(snapshot_files "$unsafe")
 if sh "$installer" --target-dir "$unsafe"; then fail "installer accepted symlinked Luna"; fi
 after=$(snapshot_files "$unsafe")
 [ "$before" = "$after" ] || fail "symlink refusal partially mutated target"
-test ! -e "$unsafe/$terra_file" || fail "symlink refusal partially installed Terra"
-test ! -e "$unsafe/$sol_file" || fail "symlink refusal partially installed Sol"
-pass "unsafe destination refusal with zero partial mutation"
+pass "symlink refusal with zero partial mutation"
+
+nonregular=$tmp_dir/nonregular
+mkdir -p "$nonregular/$retired_sol_file"
+before=$(snapshot_files "$nonregular")
+if sh "$installer" --target-dir "$nonregular"; then fail "installer accepted nonregular retired profile"; fi
+after=$(snapshot_files "$nonregular")
+[ "$before" = "$after" ] || fail "nonregular refusal partially mutated target"
+
+unrelated=$tmp_dir/unrelated
+mkdir "$unrelated"
+printf '%s\n' 'name = "user_agent"' > "$unrelated/user-agent.toml"
+sh "$installer" --target-dir "$unrelated"
+grep -Fq 'name = "user_agent"' "$unrelated/user-agent.toml" || fail "installer changed unrelated agent"
+assert_only_current_profile "$unrelated"
+pass "nonregular refusal and unrelated agent preservation"
 
 runtime_sessions=$tmp_dir/runtime-sessions
 runtime_day=$runtime_sessions/2026/08/15
