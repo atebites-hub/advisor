@@ -72,6 +72,10 @@ fourth route. Use ODW when scale requires it or when the user explicitly asks fo
 enabled ODW v0.2.0, author every model node through the immutable Luna / High wrapper in
 `references/odw.md`, and prohibit ZCode or mixed executors.
 
+When ODW is selected, pass the exact active workspace as `cwd`.
+ODW run evidence is an allowed side effect. For an otherwise read-only task, a request
+not to modify files applies to project source, not `.odw/<name>/runs/<runId>/` artifacts.
+
 Inspect the exact completed run before using any result. Missing, cached, failed, or
 conflicting trace and rollout evidence invalidates the whole run. A Luna synthesis is
 only a draft; the Sol / Ultra primary task performs final review and acceptance.
