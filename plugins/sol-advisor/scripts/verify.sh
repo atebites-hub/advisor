@@ -198,6 +198,25 @@ jq -e '
     contains("${PLUGIN_ROOT}/hooks/enforce-luna-subagent.sh"))
 ' "$hooks_config" >/dev/null || fail "spawn guard hook configuration is invalid"
 
+jq -e '
+  (.hooks.SessionStart | length) == 1 and
+  .hooks.SessionStart[0].matcher == "startup|resume|clear|compact" and
+  (.hooks.SessionStart[0].hooks | length) == 1 and
+  .hooks.SessionStart[0].hooks[0].type == "command" and
+  .hooks.SessionStart[0].hooks[0].command ==
+    "cat \"${PLUGIN_ROOT}/skills/orchestration/SKILL.md\"" and
+  .hooks.SessionStart[0].hooks[0].timeout == 5 and
+  .hooks.SessionStart[0].hooks[0].statusMessage == "Activating Sol Advisor"
+' "$hooks_config" >/dev/null || fail "automatic SessionStart hook configuration is invalid"
+
+activation_command=$(jq -r '.hooks.SessionStart[0].hooks[0].command' "$hooks_config")
+activation_output=$tmp_dir/session-start-context.md
+PLUGIN_ROOT=$plugin_dir sh -c "$activation_command" </dev/null > "$activation_output" ||
+  fail "automatic SessionStart hook command failed"
+cmp -s "$skill" "$activation_output" ||
+  fail "automatic SessionStart hook did not emit the canonical orchestration skill"
+pass "automatic SessionStart hook emits canonical orchestration context"
+
 run_spawn_guard() {
   printf '%s\n' "$1" | sh "$spawn_guard"
 }
