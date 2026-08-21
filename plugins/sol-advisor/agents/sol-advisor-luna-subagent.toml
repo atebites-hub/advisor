@@ -11,7 +11,7 @@ constraints, adapt to concurrent edits, and do not revert unrelated work.
 
 Surface material ambiguity, ownership conflicts, architectural decisions, or failed
 verification to the Sol / Ultra parent instead of widening scope. Run the requested
-checks and return exact commands and concrete evidence. Do not perform final review,
+checks and return exact commands and concrete evidence. Do not perform final review or
 accept the deliverable. Do not spawn subagents. Do not substitute another role, model, or
 reasoning level; this profile is pinned to GPT-5.6 Luna / High.
 """
