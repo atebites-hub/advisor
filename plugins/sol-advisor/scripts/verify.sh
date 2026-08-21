@@ -11,6 +11,7 @@ plugin_dir=$(CDPATH= cd "$script_dir/.." && pwd) || exit 1
 repo_dir=$(CDPATH= cd "$plugin_dir/../.." && pwd) || exit 1
 installer=$script_dir/install-agents.sh
 runtime_inspector=$script_dir/inspect-agent-runtime.sh
+odw_inspector=$script_dir/inspect-odw-run.sh
 templates=$plugin_dir/agents
 manifest=$plugin_dir/.codex-plugin/plugin.json
 skill=$plugin_dir/skills/orchestration/SKILL.md
@@ -184,7 +185,7 @@ RETIRED_SOL
   [ "$(shasum -a 256 "$target/$retired_sol_file" | awk '{print $1}')" = "$retired_sol_sha256s" ] || fail "retired Sol fixture digest drifted"
 }
 
-for required in "$installer" "$runtime_inspector" "$manifest" "$skill" "$contracts" "$operations" "$readme" "$ui" "$hooks_config" "$spawn_guard" "$session_context"; do
+for required in "$installer" "$runtime_inspector" "$odw_inspector" "$manifest" "$skill" "$contracts" "$operations" "$readme" "$ui" "$hooks_config" "$spawn_guard" "$session_context"; do
   test -f "$required" || fail "required file missing: $required"
 done
 test ! -e "$retired_contract" || fail "retired separate workflow contract remains: $retired_contract"
@@ -505,6 +506,220 @@ if sh "$runtime_inspector" --sessions-dir "$runtime_sessions" "$duplicate_id" >/
 fi
 pass "runtime inspector Luna/High tuple and safe refusals"
 
+odw_fixture_root=$(CDPATH= cd "$tmp_dir" && pwd -P)
+odw_sessions=$odw_fixture_root/odw-sessions
+odw_session_day=$odw_sessions/2026/08/21
+odw_run=$odw_fixture_root/odw-project/.odw/demo/runs/run-fixture
+mkdir -p "$odw_session_day" "$odw_run/agents"
+
+odw_id_one=91111111-1111-7111-8111-111111111111
+odw_id_two=92222222-2222-7222-8222-222222222222
+
+write_odw_rollout() {
+  fixture_id=$1
+  fixture_model=$2
+  fixture_effort=$3
+  printf '%s\n' \
+    "{\"type\":\"session_meta\",\"payload\":{\"id\":\"$fixture_id\",\"parent_thread_id\":null,\"agent_role\":null,\"agent_path\":null,\"model_provider\":\"openai\",\"cwd\":\"/fixture\"}}" \
+    "{\"type\":\"turn_context\",\"payload\":{\"model\":\"$fixture_model\",\"effort\":\"$fixture_effort\",\"sandbox_policy\":{\"type\":\"workspace-write\"},\"permission_profile\":{\"type\":\"managed\"},\"cwd\":\"/fixture\"}}" \
+    > "$odw_session_day/rollout-2026-08-21T00-00-00-$fixture_id.jsonl"
+}
+
+write_odw_trace() {
+  trace_path=$1
+  fixture_id=$2
+  fixture_model=$3
+  fixture_effort=$4
+  jq -n \
+    --arg id "$fixture_id" \
+    --arg model "$fixture_model" \
+    --arg effort "$fixture_effort" '
+    {
+      command: "codex",
+      args: [
+        "exec", "--json", "--skip-git-repo-check", "--color", "never",
+        "--sandbox", "workspace-write", "-c",
+        "shell_environment_policy.ignore_default_excludes=false",
+        "-m", $model, "-c", ("model_reasoning_effort=" + ($effort | tojson)), "-"
+      ],
+      cwd: "/fixture",
+      prompt: "DO_NOT_LEAK_PROMPT",
+      durationMs: 10,
+      exitCode: 0,
+      isError: false,
+      resultSubtype: "success",
+      stderr: "DO_NOT_LEAK_STDERR",
+      events: [
+        {type: "thread.started", thread_id: $id},
+        {type: "item.completed", item: {type: "agent_message", text: "DO_NOT_LEAK_OUTPUT"}},
+        {type: "turn.completed", usage: {input_tokens: 1, output_tokens: 1}}
+      ]
+    }
+  ' > "$trace_path"
+}
+
+printf '%s\n' 'export const meta = { name: "demo", description: "fixture" }' > "$odw_run/script.js"
+printf '%s\n' \
+  '{"type":"run_start","runId":"run-fixture"}' \
+  '{"type":"agent_start","agentId":1,"cached":false}' \
+  '{"type":"agent_start","agentId":2,"cached":false}' \
+  '{"type":"agent_end","agentId":1,"ok":true,"cached":false}' \
+  '{"type":"agent_end","agentId":2,"ok":true,"cached":false}' \
+  '{"type":"run_end","runId":"run-fixture","ok":true,"failedAgents":0,"failedWorkflows":0}' \
+  > "$odw_run/events.jsonl"
+printf '%s\n' \
+  '{"index":1,"cached":false,"result":"DO_NOT_LEAK_JOURNAL"}' \
+  '{"index":2,"cached":false,"result":"DO_NOT_LEAK_JOURNAL"}' \
+  > "$odw_run/journal.jsonl"
+
+write_odw_trace "$odw_run/agents/agent-1.jsonl" "$odw_id_one" gpt-5.6-luna high
+write_odw_trace "$odw_run/agents/agent-2.jsonl" "$odw_id_two" gpt-5.6-luna high
+write_odw_rollout "$odw_id_one" gpt-5.6-luna high
+write_odw_rollout "$odw_id_two" gpt-5.6-luna high
+
+odw_output=$(sh "$odw_inspector" --sessions-dir "$odw_sessions" "$odw_run") ||
+  fail "ODW inspector rejected a valid two-node Luna/High run"
+printf '%s\n' "$odw_output" | jq -e \
+  --arg one "$odw_id_one" --arg two "$odw_id_two" '
+  .run_id == "run-fixture" and .agent_count == 2 and
+  (.agents | map(.agent_id) == [1, 2]) and
+  (.agents | map(.thread_id) == [$one, $two]) and
+  all(.agents[]; .model == "gpt-5.6-luna" and .effort == "high")
+' >/dev/null || fail "ODW inspector returned incorrect allowlisted evidence"
+if printf '%s\n' "$odw_output" | grep -Eq 'DO_NOT_LEAK|prompt|stderr|cwd|tokens'; then
+  fail "ODW inspector leaked non-routing payload data"
+fi
+
+copy_odw_case() {
+  case_name=$1
+  case_run=$odw_fixture_root/$case_name/.odw/demo/runs/run-fixture
+  mkdir -p "$(dirname "$case_run")"
+  cp -R "$odw_run" "$case_run"
+  printf '%s\n' "$case_run"
+}
+
+rewrite_json() {
+  filter=$1
+  target=$2
+  jq "$filter" "$target" > "$tmp_dir/rewrite.json"
+  mv "$tmp_dir/rewrite.json" "$target"
+}
+
+rewrite_jsonl() {
+  filter=$1
+  target=$2
+  jq -c "$filter" "$target" > "$tmp_dir/rewrite.jsonl"
+  mv "$tmp_dir/rewrite.jsonl" "$target"
+}
+
+assert_odw_rejected() {
+  label=$1
+  fixture_run=$2
+  fixture_sessions=$3
+  rejection_output=$tmp_dir/odw-rejection-output
+  if sh "$odw_inspector" --sessions-dir "$fixture_sessions" "$fixture_run" > "$rejection_output" 2>&1; then
+    fail "ODW inspector accepted $label"
+  fi
+  if grep -Eq 'DO_NOT_LEAK|prompt|stderr|JOURNAL' "$rejection_output"; then
+    fail "ODW inspector leaked payload while rejecting $label"
+  fi
+}
+
+zcode_run=$(copy_odw_case zcode)
+rewrite_json '.command = "zcode"' "$zcode_run/agents/agent-1.jsonl"
+assert_odw_rejected "ZCode executor" "$zcode_run" "$odw_sessions"
+
+wrong_model_run=$(copy_odw_case wrong-model)
+rewrite_json '(.args | index("gpt-5.6-luna")) as $i | .args[$i] = "gpt-5.6-sol"' "$wrong_model_run/agents/agent-1.jsonl"
+assert_odw_rejected "wrong model flag" "$wrong_model_run" "$odw_sessions"
+
+missing_model_run=$(copy_odw_case missing-model)
+rewrite_json '(.args | index("-m")) as $i | .args = (.args[:$i] + .args[$i + 2:])' "$missing_model_run/agents/agent-1.jsonl"
+assert_odw_rejected "missing model flag" "$missing_model_run" "$odw_sessions"
+
+duplicate_model_run=$(copy_odw_case duplicate-model)
+rewrite_json '.args += ["-m", "gpt-5.6-luna"]' "$duplicate_model_run/agents/agent-1.jsonl"
+assert_odw_rejected "duplicate model flag" "$duplicate_model_run" "$odw_sessions"
+
+wrong_effort_run=$(copy_odw_case wrong-effort)
+rewrite_json '(.args | index("model_reasoning_effort=\"high\"")) as $i | .args[$i] = "model_reasoning_effort=\"medium\""' "$wrong_effort_run/agents/agent-1.jsonl"
+assert_odw_rejected "wrong effort flag" "$wrong_effort_run" "$odw_sessions"
+
+missing_effort_run=$(copy_odw_case missing-effort)
+rewrite_json '(.args | index("model_reasoning_effort=\"high\"")) as $i | .args = (.args[:$i - 1] + .args[$i + 1:])' "$missing_effort_run/agents/agent-1.jsonl"
+assert_odw_rejected "missing effort flag" "$missing_effort_run" "$odw_sessions"
+
+duplicate_effort_run=$(copy_odw_case duplicate-effort)
+rewrite_json '.args += ["-c", "model_reasoning_effort=\"high\""]' "$duplicate_effort_run/agents/agent-1.jsonl"
+assert_odw_rejected "duplicate effort flag" "$duplicate_effort_run" "$odw_sessions"
+
+missing_thread_run=$(copy_odw_case missing-thread)
+rewrite_json '.events |= map(select(.type != "thread.started"))' "$missing_thread_run/agents/agent-1.jsonl"
+assert_odw_rejected "missing thread id" "$missing_thread_run" "$odw_sessions"
+
+duplicate_thread_run=$(copy_odw_case duplicate-thread)
+rewrite_json "(.events[] | select(.type == \"thread.started\") | .thread_id) = \"$odw_id_one\"" "$duplicate_thread_run/agents/agent-2.jsonl"
+assert_odw_rejected "duplicate thread id" "$duplicate_thread_run" "$odw_sessions"
+
+failed_run=$(copy_odw_case failed-node)
+rewrite_jsonl 'if .type == "agent_end" and .agentId == 1 then .ok = false else . end' "$failed_run/events.jsonl"
+assert_odw_rejected "failed node" "$failed_run" "$odw_sessions"
+
+skipped_run=$(copy_odw_case skipped-node)
+rewrite_jsonl 'if .type == "agent_end" and .agentId == 1 then .skipped = true else . end' "$skipped_run/events.jsonl"
+assert_odw_rejected "skipped node" "$skipped_run" "$odw_sessions"
+
+cached_run=$(copy_odw_case cached-node)
+rewrite_jsonl 'if .type == "agent_start" and .agentId == 1 then .cached = true else . end' "$cached_run/events.jsonl"
+assert_odw_rejected "cached node" "$cached_run" "$odw_sessions"
+
+partial_run=$(copy_odw_case partial-journal)
+sed -n '1p' "$partial_run/journal.jsonl" > "$tmp_dir/partial-journal.jsonl"
+mv "$tmp_dir/partial-journal.jsonl" "$partial_run/journal.jsonl"
+assert_odw_rejected "partial journal" "$partial_run" "$odw_sessions"
+
+missing_trace_run=$(copy_odw_case missing-trace)
+mv "$missing_trace_run/agents/agent-2.jsonl" "$tmp_dir/missing-agent-2.jsonl"
+assert_odw_rejected "missing trace" "$missing_trace_run" "$odw_sessions"
+
+missing_sessions=$odw_fixture_root/missing-odw-sessions/2026/08/21
+mkdir -p "$missing_sessions"
+cp "$odw_session_day/rollout-2026-08-21T00-00-00-$odw_id_one.jsonl" "$missing_sessions/"
+assert_odw_rejected "missing rollout" "$odw_run" "$odw_fixture_root/missing-odw-sessions"
+
+duplicate_sessions=$odw_fixture_root/duplicate-odw-sessions
+cp -R "$odw_sessions" "$duplicate_sessions"
+mkdir -p "$duplicate_sessions/2026/08/22"
+cp "$odw_session_day/rollout-2026-08-21T00-00-00-$odw_id_one.jsonl" \
+  "$duplicate_sessions/2026/08/22/rollout-2026-08-22T00-00-00-$odw_id_one.jsonl"
+assert_odw_rejected "duplicate rollout" "$odw_run" "$duplicate_sessions"
+
+wrong_runtime_sessions=$odw_fixture_root/wrong-runtime-sessions
+cp -R "$odw_sessions" "$wrong_runtime_sessions"
+rewrite_jsonl 'if .type == "turn_context" then .payload.model = "gpt-5.6-sol" else . end' \
+  "$wrong_runtime_sessions/2026/08/21/rollout-2026-08-21T00-00-00-$odw_id_one.jsonl"
+assert_odw_rejected "wrong runtime model" "$odw_run" "$wrong_runtime_sessions"
+
+conflicting_runtime_sessions=$odw_fixture_root/conflicting-runtime-sessions
+cp -R "$odw_sessions" "$conflicting_runtime_sessions"
+printf '%s\n' \
+  '{"type":"turn_context","payload":{"model":"gpt-5.6-luna","effort":"medium"}}' \
+  >> "$conflicting_runtime_sessions/2026/08/21/rollout-2026-08-21T00-00-00-$odw_id_one.jsonl"
+assert_odw_rejected "conflicting runtime effort" "$odw_run" "$conflicting_runtime_sessions"
+
+native_role_sessions=$odw_fixture_root/native-role-sessions
+cp -R "$odw_sessions" "$native_role_sessions"
+rewrite_jsonl 'if .type == "session_meta" then .payload.agent_role = "sol_advisor_luna_subagent" else . end' \
+  "$native_role_sessions/2026/08/21/rollout-2026-08-21T00-00-00-$odw_id_one.jsonl"
+assert_odw_rejected "native role masquerading as ODW" "$odw_run" "$native_role_sessions"
+
+symlink_parent=$odw_fixture_root/symlink-case/.odw/demo/runs
+mkdir -p "$symlink_parent"
+ln -s "$odw_run" "$symlink_parent/run-fixture"
+assert_odw_rejected "symlinked run" "$symlink_parent/run-fixture" "$odw_sessions"
+
+pass "ODW inspector proves every fresh Luna/High node and safely rejects invalid evidence"
+
 for document in "$contracts" "$operations"; do
   grep -Fq 'agent_type: sol_advisor_luna_subagent' "$document" || fail "missing Luna subagent spawn in $document"
   grep -Fq 'fork_turns: none' "$document" || fail "missing fresh context in $document"
@@ -631,6 +846,7 @@ pass "obsolete single-lane claims and second Terra role absent"
 
 sh -n "$installer"
 sh -n "$runtime_inspector"
+sh -n "$odw_inspector"
 sh -n "$script_dir/verify.sh"
 sh -n "$session_context"
 pass "shell syntax"
