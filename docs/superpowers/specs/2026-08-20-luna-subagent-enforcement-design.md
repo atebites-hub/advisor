@@ -1,6 +1,6 @@
 # Sol/Ultra Root and Luna/High Subagent Enforcement
 
-Status: design approved on 2026-08-20; written spec pending user review.
+Status: design and written spec approved on 2026-08-20.
 
 ## Decision
 
@@ -158,8 +158,8 @@ modified, symlinked, nonregular, unreadable, or unknown retired file causes a re
 with no partial mutation. Unrelated agent files are untouched. A successful migration
 leaves exactly the generic Luna profile from Sol Advisor and is idempotent.
 
-Historical role names and fingerprints may remain only inside bounded migration tests
-and cleanup logic; they are not active roles or routing options.
+Historical role names and fingerprints may remain only inside bounded migration or
+spawn-enforcement tests and cleanup logic; they are not active roles or routing options.
 
 ## Documentation changes
 
