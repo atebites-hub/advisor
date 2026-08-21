@@ -11,7 +11,7 @@
   "interface": {
     "displayName": "Sol Advisor",
     "shortDescription": "Keep judgment and review in Sol / Ultra; enforce Luna / High for every supported child.",
-    "longDescription": "Sol Advisor keeps GPT-5.6 Sol / Ultra in the primary task for architecture, material judgment, verification, review, and acceptance. solo is the default; delegate uses the one native GPT-5.6 Luna / High child for bounded work; audit keeps the verdict in the primary task. A trusted plugin hook denies supported child spawns outside the exact Luna / High contract, and runtime evidence must confirm the role, model, and effort.",
+    "longDescription": "Sol Advisor keeps GPT-5.6 Sol / Ultra in the primary task for architecture, material judgment, verification, review, and acceptance. Solo is the default; delegate uses the one native GPT-5.6 Luna / High child for bounded work; audit keeps the verdict in the primary task. A trusted plugin hook denies supported child spawns outside the exact Luna / High contract, and runtime evidence must confirm the role, model, and effort.",
     "developerName": "Daniel McAteer",
     "category": "Productivity",
     "capabilities": ["Interactive", "Write", "Lifecycle hooks"],

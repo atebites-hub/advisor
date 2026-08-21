@@ -231,7 +231,7 @@ jq empty "$manifest"
 [ "$(jq -r '.version' "$manifest")" = 0.7.0 ] || fail "manifest version is not 0.7.0"
 grep -Fq 'Sol / Ultra' "$manifest" || fail "manifest omits Sol / Ultra"
 grep -Fq 'Luna / High' "$manifest" || fail "manifest omits Luna / High"
-grep -Fq 'solo is the default' "$manifest" || fail "manifest omits solo default"
+grep -Fiq 'solo is the default' "$manifest" || fail "manifest omits solo default"
 grep -Fq 'delegate uses' "$manifest" || fail "manifest omits delegate contract"
 grep -Fq 'audit keeps the verdict in the primary task' "$manifest" || fail "manifest omits audit contract"
 grep -Fq 'denies supported child spawns' "$manifest" || fail "manifest omits spawn guard"
@@ -467,7 +467,7 @@ for mode in solo delegate audit; do
   grep -Fq "\`$mode\`" "$skill" || fail "skill omits $mode mode"
   grep -Fq "\`$mode\`" "$contracts" || fail "contracts omit $mode mode"
 done
-for active_document in "$readme" "$manifest" "$skill" "$contracts" "$operations" "$ui" "$templates"; do
+for active_document in "$readme" "$manifest" "$skill" "$contracts" "$operations" "$ui" "$templates"/*.toml; do
   if grep -Eqi 'gpt-5\.6-terra|Luna / Max|Sol / High|sol_advisor_(terra_implementer|sol_reviewer)|\`full\`|mode:.*full' "$active_document"; then
     fail "retired active routing remains in $active_document"
   fi

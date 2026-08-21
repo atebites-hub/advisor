@@ -40,7 +40,7 @@ still required and the plugin does not claim an unbypassable platform policy.
 
 ## Updating
 
-Update the marketplace plugin, reinstall the companion roles, and start a new task:
+Update the marketplace plugin, reinstall the companion profile, and start a new task:
 
 ~~~sh
 codex plugin marketplace upgrade sol-advisor
