@@ -92,7 +92,9 @@ perform final review or spawn further children.
 ### Spawn guard
 
 The plugin uses the native default `hooks/hooks.json` location and a synchronous
-`PreToolUse` command hook matching `spawn_agent|Agent`.
+`PreToolUse` command hook matching `collaborationspawn_agent|spawn_agent|Agent`.
+Codex 0.149 presents collaboration spawns to hooks as `collaborationspawn_agent`,
+while rollout records retain namespace `collaboration` plus name `spawn_agent`.
 
 A spawn is permitted only when all of these are true:
 

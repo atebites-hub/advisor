@@ -86,7 +86,7 @@ Add both variables to the existing `for required in ...` loop. Immediately after
 ```sh
 jq -e '
   (.hooks.PreToolUse | length) == 1 and
-  .hooks.PreToolUse[0].matcher == "spawn_agent|Agent" and
+  .hooks.PreToolUse[0].matcher == "collaborationspawn_agent|spawn_agent|Agent" and
   (.hooks.PreToolUse[0].hooks | length) == 1 and
   .hooks.PreToolUse[0].hooks[0].type == "command" and
   (.hooks.PreToolUse[0].hooks[0].command |
@@ -112,8 +112,13 @@ allowed_payload='{"hook_event_name":"PreToolUse","tool_name":"spawn_agent","tool
 allowed_output=$(run_spawn_guard "$allowed_payload") || fail "compliant Luna spawn guard invocation failed"
 [ -z "$allowed_output" ] || fail "compliant Luna spawn emitted unexpected output"
 
+allowed_collaboration_payload='{"hook_event_name":"PreToolUse","tool_name":"collaborationspawn_agent","tool_input":{"agent_type":"sol_advisor_luna_subagent","fork_turns":"none","task_name":"fixture","message":"bounded fixture"}}'
+allowed_collaboration_output=$(run_spawn_guard "$allowed_collaboration_payload") || fail "compliant collaboration Luna spawn guard invocation failed"
+[ -z "$allowed_collaboration_output" ] || fail "compliant collaboration Luna spawn emitted unexpected output"
+
 assert_spawn_denied "missing role" '{"hook_event_name":"PreToolUse","tool_name":"spawn_agent","tool_input":{"fork_turns":"none"}}'
 assert_spawn_denied "built-in worker" '{"hook_event_name":"PreToolUse","tool_name":"spawn_agent","tool_input":{"agent_type":"worker","fork_turns":"none"}}'
+assert_spawn_denied "collaboration built-in worker" '{"hook_event_name":"PreToolUse","tool_name":"collaborationspawn_agent","tool_input":{"agent_type":"worker","fork_turns":"none"}}'
 assert_spawn_denied "retired Terra role" '{"hook_event_name":"PreToolUse","tool_name":"spawn_agent","tool_input":{"agent_type":"sol_advisor_terra_implementer","fork_turns":"none"}}'
 assert_spawn_denied "retired Sol role" '{"hook_event_name":"PreToolUse","tool_name":"spawn_agent","tool_input":{"agent_type":"sol_advisor_sol_reviewer","fork_turns":"none"}}'
 assert_spawn_denied "inherited context" '{"hook_event_name":"PreToolUse","tool_name":"spawn_agent","tool_input":{"agent_type":"sol_advisor_luna_subagent","fork_turns":"all"}}'
@@ -143,7 +148,7 @@ Create `plugins/sol-advisor/hooks/hooks.json` exactly as:
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "spawn_agent|Agent",
+        "matcher": "collaborationspawn_agent|spawn_agent|Agent",
         "hooks": [
           {
             "type": "command",
@@ -178,7 +183,7 @@ fi
 payload=$(cat)
 if printf '%s\n' "$payload" | jq -e '
   .hook_event_name == "PreToolUse" and
-  .tool_name == "spawn_agent" and
+  (.tool_name == "collaborationspawn_agent" or .tool_name == "spawn_agent") and
   (.tool_input | type) == "object" and
   .tool_input.agent_type == "sol_advisor_luna_subagent" and
   .tool_input.fork_turns == "none" and
