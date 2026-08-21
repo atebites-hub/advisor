@@ -68,7 +68,7 @@ duplicate it.
 ## Use ODW only for scaled or rerunnable work
 
 Open Dynamic Workflows is an execution mechanism within `delegate` or `audit`, never a
-fourth route. Use it only when its own scale or repeatability criteria apply. Confirm
+fourth route. Use ODW when scale requires it or when the user explicitly asks for a repeatable/rerunnable multi-part workflow or audit; repeatability alone is sufficient even when immediate fanout is small. Confirm
 enabled ODW v0.2.0, author every model node through the immutable Luna / High wrapper in
 `references/odw.md`, and prohibit ZCode or mixed executors.
 

@@ -736,6 +736,7 @@ grep -Fq '../../scripts/inspect-agent-runtime.sh' "$operations" || fail "operati
 grep -Fq '/hooks' "$operations" || fail "operations omits hook trust"
 grep -Fq 'references/odw.md' "$skill" || fail "skill does not route ODW work to its reference"
 grep -Fq 'execution mechanism within `delegate` or `audit`' "$skill" || fail "skill does not keep ODW inside the three routes"
+grep -Fq 'when the user explicitly asks for a repeatable/rerunnable multi-part workflow or audit' "$skill" || fail "skill omits explicit repeatable/rerunnable ODW selection"
 grep -Fq 'Sol / Ultra primary task performs final review' "$skill" || fail "skill delegates ODW final review"
 grep -Fq 'open-dynamic-workflows@open-dynamic-workflows' "$odw_reference" || fail "ODW reference omits installed-version preflight"
 grep -Fq '"0.2.0"' "$odw_reference" || fail "ODW reference omits supported version"
