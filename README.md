@@ -1,11 +1,7 @@
 # Sol Advisor
 
-**Sol / High runs the show. It declares a risk-gated route before task tools, keeps
-solo as the default, and uses a single auxiliary only when that improves delivery.**
-
-Sol Advisor is a Codex-only workflow for capability-routed software delivery. You
-bring the goal and constraints; Sol owns the plan, implementation or delegation,
-verification, and acceptance.
+**Sol / Ultra runs the show. It owns judgment and review; every supported child is
+Luna / High.**
 
 ## Go deeper
 
@@ -14,8 +10,8 @@ I write [**Attention Heads**](https://attentionheads.substack.com/?utm_source=gi
 ## Quick start
 
 You need a current Codex CLI or ChatGPT desktop app with plugins enabled, GPT-5.6
-Sol / High for the primary session, native custom-agent support, and jq. GPT-5.6
-Luna / Max or Terra / High access is needed only when the selected route delegates.
+Sol / Ultra for the primary task, GPT-5.6 Luna / High access, native custom-agent
+support, and jq.
 
 ~~~sh
 codex plugin marketplace add DannyMac180/sol-advisor --ref main
@@ -23,44 +19,24 @@ codex plugin add sol-advisor@sol-advisor
 plugin_dir="$(codex plugin list --json | jq -r '.installed[] | select(.pluginId == "sol-advisor@sol-advisor") | .source.path')" && test -n "$plugin_dir" && test "$plugin_dir" != null && test -d "$plugin_dir" && test -f "$plugin_dir/scripts/install-agents.sh" && sh "$plugin_dir/scripts/install-agents.sh"
 ~~~
 
-The companion installer verifies all three exact role files after installation. It is
-fail-closed: modified, unsafe, nonregular, symlinked, unknown, or differing files
-are left untouched. It does not edit Codex configuration. Start a fresh Codex task
-after installation so native roles are discovered.
+The companion installer leaves one exact Luna / High profile and safely retires only
+byte-exact Sol Advisor profiles from older releases. It refuses modified, unsafe,
+nonregular, symlinked, unreadable, or conflicting destinations without partial
+mutation and does not edit Codex configuration.
 
-Use this one prompt in the new task:
-
-~~~text
-Use $sol-advisor:orchestration to build this feature and verify it. Declare the selective route before task tools.
-~~~
-
-## What you do
-
-Give Sol the outcome, constraints, and any important repository context. You do not
-need to select or manage a lane; Sol records the route and owns verification and
-acceptance.
-
-## Routes
+After installation, open `/hooks`, review and trust the Sol Advisor hook, then start a
+fresh task. Until the hook is trusted, supported spawn calls are not enforced.
 
 | Mode | Use it when | Delivery |
 |---|---|---|
-| `solo` | Default; risk is contained. | Root plans, implements, tests, and self-reviews. |
-| `delegate` | A complete spec is better executed by one implementer. | Luna / Max for bounded work, or Terra / High for judgment-heavy or high-risk work; root verifies. |
-| `audit` | Independent final scrutiny matters more than delegation. | Root implements; a fresh read-only Sol / High reviews. |
-| `full` | Explicit broad or high-risk exception. | One selected implementer, root verification, and a fresh Sol / High review. |
+| `solo` | Default; primary-task execution is appropriate. | Sol / Ultra implements, verifies, and self-reviews. |
+| `delegate` | A bounded packet benefits from separate execution. | Luna / High executes; Sol / Ultra verifies and reviews. |
+| `audit` | The requested outcome is a review. | Sol / Ultra renders the verdict; Luna / High may gather bounded evidence. |
 
-Solo is the default. One auxiliary is the default maximum; `full` is the explicit
-exception. Sol emits a `SELECTIVE ROUTE` declaration with the mode and concise risk
-rationale before the first task tool call. It can escalate only when newly observed
-risk justifies it and never silently downgrades.
-
-## What happens automatically
-
-Sol / High keeps architecture, decomposition, route selection, parent verification,
-escalation decisions, and acceptance in the primary task. Auxiliary work substitutes
-for root work; it does not duplicate it. The root inspects the complete diff and
-reruns the requested checks. When the selected route includes a review, a fresh Sol /
-High reviewer returns ship, fix-first, or rethink; any fix requires a new review.
+The trusted hook blocks supported `spawn_agent` calls unless they use the exact fresh
+Luna / High profile. [OpenAI's Codex hooks documentation](https://learn.chatgpt.com/docs/hooks)
+notes that specialized paths may bypass ordinary tool hooks, so runtime evidence is
+still required and the plugin does not claim an unbypassable platform policy.
 
 ## Updating
 

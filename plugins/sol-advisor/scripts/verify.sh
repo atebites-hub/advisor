@@ -228,14 +228,14 @@ assert_spawn_denied "malformed JSON" 'not-json'
 pass "plugin-wide spawn guard allows only the exact fresh Luna subagent contract"
 
 jq empty "$manifest"
-[ "$(jq -r '.version' "$manifest")" = 0.6.0 ] || fail "manifest version is not 0.6.0"
-grep -Fq 'SELECTIVE ROUTE' "$manifest" || fail "manifest omits route declaration"
+[ "$(jq -r '.version' "$manifest")" = 0.7.0 ] || fail "manifest version is not 0.7.0"
+grep -Fq 'Sol / Ultra' "$manifest" || fail "manifest omits Sol / Ultra"
+grep -Fq 'Luna / High' "$manifest" || fail "manifest omits Luna / High"
 grep -Fq 'solo is the default' "$manifest" || fail "manifest omits solo default"
-grep -Fq 'delegate uses native GPT-5.6 Luna / Max' "$manifest" || fail "manifest omits delegate role contract"
-grep -Fq 'audit uses a fresh read-only GPT-5.6 Sol / High review' "$manifest" || fail "manifest omits audit contract"
-grep -Fq 'full combines one selected implementer' "$manifest" || fail "manifest omits exceptional full contract"
-grep -Fq 'fails closed' "$manifest" || fail "manifest omits fail-closed evidence rule"
-pass "manifest JSON, v0.6.0 release, and selective-routing language"
+grep -Fq 'delegate uses' "$manifest" || fail "manifest omits delegate contract"
+grep -Fq 'audit keeps the verdict in the primary task' "$manifest" || fail "manifest omits audit contract"
+grep -Fq 'denies supported child spawns' "$manifest" || fail "manifest omits spawn guard"
+pass "manifest JSON and v0.7.0 Sol / Ultra and Luna / High release language"
 
 python3 - "$templates" <<'PY'
 from pathlib import Path
@@ -467,18 +467,23 @@ for mode in solo delegate audit; do
   grep -Fq "\`$mode\`" "$skill" || fail "skill omits $mode mode"
   grep -Fq "\`$mode\`" "$contracts" || fail "contracts omit $mode mode"
 done
-for active_document in "$skill" "$contracts" "$operations"; do
-  if grep -Eqi 'gpt-5\.6-terra|Luna / Max|sol_advisor_(terra_implementer|sol_reviewer)|mode:.*full|\`full\`' "$active_document"; then
+for active_document in "$readme" "$manifest" "$skill" "$contracts" "$operations" "$ui" "$templates"; do
+  if grep -Eqi 'gpt-5\.6-terra|Luna / Max|Sol / High|sol_advisor_(terra_implementer|sol_reviewer)|\`full\`|mode:.*full' "$active_document"; then
     fail "retired active routing remains in $active_document"
   fi
 done
-pass "Sol / Ultra primary and Luna / High child contracts are consistent"
+pass "active release copy has no retired routing contract"
 
 readme_lines=$(wc -l < "$readme" | tr -d ' ')
 [ "$readme_lines" -le 110 ] || fail "README remains maintainer-sized ($readme_lines lines)"
 grep -Fq 'codex plugin marketplace add' "$readme" || fail "README omits marketplace quick start"
 grep -Fq 'codex plugin add' "$readme" || fail "README omits plugin quick start"
 grep -Fq 'scripts/install-agents.sh' "$readme" || fail "README omits companion install"
+grep -Fq '/hooks' "$readme" || fail "README omits hook trust"
+grep -Fq '| `solo` |' "$readme" || fail "README route table omits solo"
+grep -Fq '| `delegate` |' "$readme" || fail "README route table omits delegate"
+grep -Fq '| `audit` |' "$readme" || fail "README route table omits audit"
+grep -Fq 'specialized paths' "$readme" || fail "README omits hook limitation"
 if grep -Eq 'agent_type:|fork_turns:|inspect-agent-runtime|sandbox_policy|sandbox_mode' "$readme"; then
   fail "README exposes maintainer routing/runtime machinery"
 fi
@@ -486,17 +491,6 @@ if grep -Fq -- '--check' "$readme"; then
   fail "README quick start repeats the post-install --check"
 fi
 grep -Fq 'advanced native operations' "$readme" || fail "README omits operations link"
-grep -Fq '| `solo` |' "$readme" || fail "README route table omits solo"
-grep -Fq '| `delegate` |' "$readme" || fail "README route table omits delegate"
-grep -Fq '| `audit` |' "$readme" || fail "README route table omits audit"
-grep -Fq '| `full` |' "$readme" || fail "README route table omits full"
-grep -Fq 'Solo is the default.' "$readme" || fail "README omits solo default"
-grep -Fq 'One auxiliary is the default maximum' "$readme" || fail "README omits auxiliary limit"
-grep -Fq 'before the first task tool call' "$readme" || fail "README omits route-before-tools rule"
-grep -Fq 'newly observed' "$readme" || fail "README omits escalation gate"
-grep -Fq 'never silently downgrades' "$readme" || fail "README permits silent downgrade"
-grep -Fq 'need to select or manage a lane' "$readme" || fail "README asks users to manage lanes"
-grep -Fq 'Luna / Max or Terra / High access is needed only when' "$readme" || fail "README omits conditional delegate access"
 python3 - "$readme" <<'PY'
 from pathlib import Path
 import sys
@@ -555,10 +549,8 @@ for path in paths:
 print("obsolete workflow references are absent")
 PY
 
-grep -Fq 'Sol / High runs the show' "$readme" || fail "README omits primary ownership"
-grep -Fq 'Luna / Max' "$readme" || fail "README omits Luna / Max delegate path"
-grep -Fq 'Terra / High' "$readme" || fail "README omits Terra delegate path"
-grep -Fq 'Auxiliary work substitutes' "$readme" || fail "README omits substitution rule"
+grep -Fq 'Sol / Ultra runs the show' "$readme" || fail "README omits primary ownership"
+grep -Fq 'Luna / High' "$readme" || fail "README omits Luna / High child path"
 grep -Fq 'Attention Heads' "$readme" || fail "README lost Attention Heads section"
 grep -Fq 'https://attentionheads.substack.com/?utm_source=github&utm_medium=readme&utm_campaign=sol-advisor' "$readme" || fail "README changed Attention Heads link"
 grep -Fq 'https://attentionheads.substack.com/subscribe?utm_source=github&utm_medium=readme&utm_campaign=sol-advisor' "$readme" || fail "README changed Subscribe link"
@@ -579,4 +571,4 @@ sh -n "$runtime_inspector"
 sh -n "$script_dir/verify.sh"
 pass "shell syntax"
 
-printf '%s\n' "VERIFY PASSED: Sol Advisor v0.6.0 selective routing checks completed in $tmp_dir"
+printf '%s\n' "VERIFY PASSED: Sol Advisor v0.7.0 Sol / Ultra and Luna / High checks completed in $tmp_dir"
