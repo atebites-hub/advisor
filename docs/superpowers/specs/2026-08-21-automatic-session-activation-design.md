@@ -113,6 +113,8 @@ diagnose.
   activation hook from spawn enforcement and document preflight behavior.
 - `plugins/sol-advisor/.codex-plugin/plugin.json`: bump the patch release and update
   activation wording.
+- `plugins/sol-advisor/skills/orchestration/agents/openai.yaml`: remove the obsolete
+  explicit-invocation prompt and describe automatic routing.
 
 No Luna profile, installer, runtime-inspector, role-contract, or orchestration-policy
 change is part of this release.
