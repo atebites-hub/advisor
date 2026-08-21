@@ -37,6 +37,12 @@ active.
 | `delegate` | A bounded packet benefits from separate execution. | Luna / High executes; Sol / Ultra verifies and reviews. |
 | `audit` | The requested outcome is a review. | Sol / Ultra renders the verdict; Luna / High may gather bounded evidence. |
 
+When enabled Open Dynamic Workflows v0.2.0 genuinely fits a large or rerunnable task,
+Sol Advisor keeps workflow design and final review in Sol / Ultra, pins every ODW model
+node to Codex Luna / High, and rejects the run unless traces and Codex runtime metadata
+prove every node. ODW itself remains unchanged; workflows authored outside Sol Advisor
+are outside this contract.
+
 The trusted hook blocks supported `spawn_agent` calls unless they use the exact fresh
 Luna / High profile. [OpenAI's Codex hooks documentation](https://learn.chatgpt.com/docs/hooks)
 notes that specialized paths may bypass ordinary tool hooks, so runtime evidence is
@@ -53,7 +59,7 @@ plugin_dir="$(codex plugin list --json | jq -r '.installed[] | select(.pluginId 
 ~~~
 
 For exact spawn, runtime-evidence, sandbox, installer, and maintainer verification
-details, read [advanced native operations](plugins/sol-advisor/skills/orchestration/references/operations.md).
+details, read [advanced operations](plugins/sol-advisor/skills/orchestration/references/operations.md).
 For local development, install this checkout as a marketplace:
 
 ~~~sh

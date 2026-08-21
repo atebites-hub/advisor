@@ -10,8 +10,9 @@ decomposition, material judgment, parent verification, review, and acceptance. R
 are exactly `solo`, `delegate`, and `audit`. Solo is the default.
 One child is the default maximum; use more only for explicitly independent parallel work.
 
-Read [references/role-contracts.md](references/role-contracts.md) before delegation.
-Use [references/operations.md](references/operations.md) for hook trust, exact spawn,
+Read [references/role-contracts.md](references/role-contracts.md) before native
+delegation. Read [references/odw.md](references/odw.md) before using Open Dynamic
+Workflows. Use [references/operations.md](references/operations.md) for hook trust,
 preflight, runtime evidence, migration, and release procedures.
 
 ## Confirm the primary task
@@ -64,6 +65,17 @@ Keep judgment-heavy, high-risk, architectural, ambiguous, or wide-blast-radius w
 the Sol / Ultra primary task. Child work substitutes for primary-task work; do not
 duplicate it.
 
+## Use ODW only for scaled or rerunnable work
+
+Open Dynamic Workflows is an execution mechanism within `delegate` or `audit`, never a
+fourth route. Use it only when its own scale or repeatability criteria apply. Confirm
+enabled ODW v0.2.0, author every model node through the immutable Luna / High wrapper in
+`references/odw.md`, and prohibit ZCode or mixed executors.
+
+Inspect the exact completed run before using any result. Missing, cached, failed, or
+conflicting trace and rollout evidence invalidates the whole run. A Luna synthesis is
+only a draft; the Sol / Ultra primary task performs final review and acceptance.
+
 ## Specify and verify every child task
 
 Every child packet contains OBJECTIVE, FILES AND OWNERSHIP, INTERFACES, CONSTRAINTS,
@@ -80,3 +92,7 @@ The trusted plugin hook blocks supported `spawn_agent` calls, including the `Age
 alias and code-mode calls. It is not an unbypassable platform policy: disabled,
 untrusted, failed, or specialized opt-out paths are outside the guard. Never claim
 enforcement without observed hook trust and runtime evidence.
+
+ODW launches independent `codex exec` subprocesses outside the native spawn hook. Its
+Sol Advisor boundary is locked authoring plus fail-closed post-run acceptance, not a
+pre-spawn platform policy or a modification to ODW.

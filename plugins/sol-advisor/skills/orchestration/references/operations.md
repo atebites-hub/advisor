@@ -1,8 +1,8 @@
-# Native operations
+# Operations
 
-This is the maintainer and operator reference for Sol Advisor's native custom-agent
-workflow. Keep the README user-facing; use this page when installing, delegating,
-inspecting routing, or validating a release.
+This is the maintainer and operator reference for Sol Advisor's native custom-agent and
+Open Dynamic Workflows paths. Keep the README user-facing; use this page when
+installing, delegating, inspecting routing, or validating a release.
 
 ## Role pin and spawn contract
 
@@ -93,6 +93,22 @@ Every child receives the five-part packet from role-contracts.md. The Sol / Ultr
 primary task owns architecture, diff or artifact inspection, verification reruns,
 corrections, final review, and acceptance. A child never renders the final verdict.
 
+## ODW v0.2.0 evidence
+
+Before an ODW call, verify the installed plugin is enabled at exactly v0.2.0 and use the
+locked wrapper in `odw.md`. After the call, bind `run_dir` to the exact absolute run
+directory returned by ODW and run the installed inspector:
+
+~~~sh
+plugin_dir="$(codex plugin list --json | jq -r '.installed[] | select(.pluginId == "sol-advisor@sol-advisor") | .source.path')"
+test -n "$plugin_dir" && test "$plugin_dir" != null && test -f "$plugin_dir/scripts/inspect-odw-run.sh"
+sh "$plugin_dir/scripts/inspect-odw-run.sh" "$run_dir"
+~~~
+
+Accept only complete fresh runs where every trace and matching rollout proves Codex
+GPT-5.6 Luna / High. The inspector rejects caches and emits routing evidence only. The
+Sol / Ultra primary still inspects artifacts, reruns checks, and performs final review.
+
 ## Maintainer verification
 
 From the repository root, run:
@@ -104,6 +120,7 @@ git status --short
 git diff --stat
 ~~~
 
-The v0.7.1 verifier covers automatic canonical `SessionStart` context, one role, spawn
-guard fixtures, Luna / High runtime evidence, three routes, JSON/TOML validity, shell
-syntax, installer migration safety, and absence of retired workflow references.
+The v0.8.0 verifier covers model-sensitive `SessionStart` context, one native role,
+spawn-guard fixtures, native and ODW Luna / High runtime evidence, ODW failure and
+leakage refusals, three routes, JSON/TOML validity, shell syntax, installer migration
+safety, and absence of retired workflow references.

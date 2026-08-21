@@ -1,7 +1,7 @@
 {
   "name": "sol-advisor",
-  "version": "0.7.1",
-  "description": "Automatically activated Codex-native routing with a Sol / Ultra primary task and Luna / High children.",
+  "version": "0.8.0",
+  "description": "Automatically activated Sol / Ultra orchestration with Luna / High native children and ODW workers.",
   "author": {"name": "Daniel McAteer", "url": "https://github.com/DannyMac180"},
   "homepage": "https://github.com/DannyMac180/sol-advisor#readme",
   "repository": "https://github.com/DannyMac180/sol-advisor",
@@ -10,15 +10,15 @@
   "skills": "./skills/",
   "interface": {
     "displayName": "Sol Advisor",
-    "shortDescription": "Automatically keep judgment and review in Sol / Ultra; enforce Luna / High for every supported child.",
-    "longDescription": "Sol Advisor automatically activates in every fresh task and keeps GPT-5.6 Sol / Ultra in the primary task for architecture, material judgment, verification, review, and acceptance. Solo is the default; delegate uses one native GPT-5.6 Luna / High child for bounded work; audit keeps the verdict in the primary task. A trusted plugin hook denies supported child spawns outside the exact Luna / High contract, and runtime evidence must confirm the role, model, and effort.",
+    "shortDescription": "Keep judgment in Sol / Ultra; route native and ODW workers to Luna / High.",
+    "longDescription": "Sol Advisor automatically activates in every fresh task and keeps GPT-5.6 Sol / Ultra in the primary task for architecture, material judgment, verification, final review, and acceptance. Solo is the default; delegate uses an exact native GPT-5.6 Luna / High child or, when scale requires Open Dynamic Workflows v0.2.0, trace-verified Codex Luna / High workers; audit keeps the verdict in the primary task. A trusted hook denies supported child spawns outside the native Luna / High contract, and model-sensitive startup context bounds Luna workers. ODW remains unchanged, and post-run evidence must prove every workflow node.",
     "developerName": "Daniel McAteer",
     "category": "Productivity",
     "capabilities": ["Interactive", "Write", "Lifecycle hooks"],
     "websiteURL": "https://github.com/DannyMac180/sol-advisor",
     "defaultPrompt": [
       "Build and verify this feature with automatic Sol Advisor routing.",
-      "Keep judgment and final review in Sol / Ultra; use only the Luna / High child for bounded delegated work."
+      "Keep judgment and final review in Sol / Ultra; use only Luna / High for native and ODW worker execution."
     ]
   }
 }

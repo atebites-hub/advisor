@@ -1,4 +1,4 @@
 interface:
   display_name: "Sol Advisor Orchestration"
-  short_description: "Automatic Sol / Ultra judgment and review with Luna / High children"
+  short_description: "Automatic Sol / Ultra review with Luna / High native and ODW workers"
   default_prompt: "Build and verify this task with automatic solo, delegate, or audit routing; keep judgment and final review in Sol / Ultra."

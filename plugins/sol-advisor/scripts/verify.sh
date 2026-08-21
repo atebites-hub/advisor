@@ -17,6 +17,7 @@ manifest=$plugin_dir/.codex-plugin/plugin.json
 skill=$plugin_dir/skills/orchestration/SKILL.md
 contracts=$plugin_dir/skills/orchestration/references/role-contracts.md
 operations=$plugin_dir/skills/orchestration/references/operations.md
+odw_reference=$plugin_dir/skills/orchestration/references/odw.md
 readme=$repo_dir/README.md
 ui=$plugin_dir/skills/orchestration/agents/openai.yaml
 retired_contract=$plugin_dir/skills/orchestration/references/luna-task-lane.md
@@ -185,7 +186,7 @@ RETIRED_SOL
   [ "$(shasum -a 256 "$target/$retired_sol_file" | awk '{print $1}')" = "$retired_sol_sha256s" ] || fail "retired Sol fixture digest drifted"
 }
 
-for required in "$installer" "$runtime_inspector" "$odw_inspector" "$manifest" "$skill" "$contracts" "$operations" "$readme" "$ui" "$hooks_config" "$spawn_guard" "$session_context"; do
+for required in "$installer" "$runtime_inspector" "$odw_inspector" "$manifest" "$skill" "$contracts" "$operations" "$odw_reference" "$readme" "$ui" "$hooks_config" "$spawn_guard" "$session_context"; do
   test -f "$required" || fail "required file missing: $required"
 done
 test ! -e "$retired_contract" || fail "retired separate workflow contract remains: $retired_contract"
@@ -279,7 +280,7 @@ assert_spawn_denied "malformed JSON" 'not-json'
 pass "plugin-wide spawn guard allows only the exact fresh Luna subagent contract"
 
 jq empty "$manifest"
-[ "$(jq -r '.version' "$manifest")" = 0.7.1 ] || fail "manifest version is not 0.7.1"
+[ "$(jq -r '.version' "$manifest")" = 0.8.0 ] || fail "manifest version is not 0.8.0"
 grep -Fq 'Sol / Ultra' "$manifest" || fail "manifest omits Sol / Ultra"
 grep -Fq 'Luna / High' "$manifest" || fail "manifest omits Luna / High"
 grep -Fiq 'solo is the default' "$manifest" || fail "manifest omits solo default"
@@ -291,7 +292,7 @@ grep -Fq 'automatically activates in every fresh task' "$manifest" ||
 if grep -Fq '$sol-advisor:orchestration' "$manifest"; then
   fail "manifest still requires explicit orchestration invocation"
 fi
-pass "manifest JSON and v0.7.1 automatic Sol / Ultra and Luna / High release language"
+pass "manifest JSON and v0.8.0 automatic Sol / Ultra and Luna / High release language"
 
 python3 - "$templates" <<'PY'
 from pathlib import Path
@@ -733,11 +734,32 @@ grep -Fq 'final review' "$skill" || fail "skill omits primary review ownership"
 grep -Fq '../../scripts/install-agents.sh' "$operations" || fail "operations does not resolve installer relatively"
 grep -Fq '../../scripts/inspect-agent-runtime.sh' "$operations" || fail "operations does not resolve inspector relatively"
 grep -Fq '/hooks' "$operations" || fail "operations omits hook trust"
+grep -Fq 'references/odw.md' "$skill" || fail "skill does not route ODW work to its reference"
+grep -Fq 'execution mechanism within `delegate` or `audit`' "$skill" || fail "skill does not keep ODW inside the three routes"
+grep -Fq 'Sol / Ultra primary task performs final review' "$skill" || fail "skill delegates ODW final review"
+grep -Fq 'open-dynamic-workflows@open-dynamic-workflows' "$odw_reference" || fail "ODW reference omits installed-version preflight"
+grep -Fq '"0.2.0"' "$odw_reference" || fail "ODW reference omits supported version"
+grep -Fq 'const lunaAgent = (prompt, options = {}) => agent(prompt, {' "$odw_reference" || fail "ODW reference omits locked wrapper"
+grep -Fq "executor: 'codex'" "$odw_reference" || fail "ODW reference omits Codex executor pin"
+grep -Fq "model: 'gpt-5.6-luna'" "$odw_reference" || fail "ODW reference omits Luna pin"
+grep -Fq "reasoningEffort: 'high'" "$odw_reference" || fail "ODW reference omits High pin"
+grep -Fq '$plugin_dir/scripts/inspect-odw-run.sh' "$odw_reference" || fail "ODW reference does not resolve the installed inspector"
+grep -Fq 'Do not spawn subagents' "$odw_reference" || fail "ODW worker packet omits nested-agent boundary"
+grep -Fq 'Do not render the final verdict' "$odw_reference" || fail "ODW worker packet omits review boundary"
+grep -Fq 'cached' "$odw_reference" || fail "ODW reference omits cached-run refusal"
+grep -Fq 'Open Dynamic Workflows' "$readme" || fail "README omits ODW compatibility"
+grep -Fq 'ODW itself remains unchanged' "$readme" || fail "README obscures plugin-only boundary"
+grep -Fq 'advanced operations' "$readme" || fail "README omits the combined operations reference"
+grep -Fq 'inspect-odw-run.sh' "$operations" || fail "operations omit ODW runtime inspector"
+grep -Fq '0.8.0' "$operations" || fail "operations omit v0.8.0 verification"
+grep -Fq 'Open Dynamic Workflows' "$manifest" || fail "manifest omits ODW compatibility"
+grep -Fq 'ODW' "$ui" || fail "UI copy omits ODW compatibility"
+pass "ODW v0.2.0 authoring, Luna/High routing, evidence, and Sol-owned acceptance contract"
 for mode in solo delegate audit; do
   grep -Fq "\`$mode\`" "$skill" || fail "skill omits $mode mode"
   grep -Fq "\`$mode\`" "$contracts" || fail "contracts omit $mode mode"
 done
-for active_document in "$readme" "$manifest" "$skill" "$contracts" "$operations" "$ui" "$templates"/*.toml; do
+for active_document in "$readme" "$manifest" "$skill" "$contracts" "$operations" "$odw_reference" "$session_context" "$ui" "$templates"/*.toml; do
   if grep -Eqi 'gpt-5\.6-terra|Luna / Max|Sol / High|sol_advisor_(terra_implementer|sol_reviewer)|\`full\`|mode:.*full' "$active_document"; then
     fail "retired active routing remains in $active_document"
   fi
@@ -768,7 +790,7 @@ fi
 if grep -Fq -- '--check' "$readme"; then
   fail "README quick start repeats the post-install --check"
 fi
-grep -Fq 'advanced native operations' "$readme" || fail "README omits operations link"
+grep -Fq 'advanced operations' "$readme" || fail "README omits operations link"
 python3 - "$readme" <<'PY'
 from pathlib import Path
 import sys
@@ -851,4 +873,4 @@ sh -n "$script_dir/verify.sh"
 sh -n "$session_context"
 pass "shell syntax"
 
-printf '%s\n' "VERIFY PASSED: Sol Advisor v0.7.1 automatic Sol / Ultra and Luna / High checks completed in $tmp_dir"
+printf '%s\n' "VERIFY PASSED: Sol Advisor v0.8.0 automatic Sol / Ultra, native Luna / High, and ODW Luna / High checks completed in $tmp_dir"
