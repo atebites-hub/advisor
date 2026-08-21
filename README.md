@@ -14,7 +14,7 @@ Sol / Ultra for the primary task, GPT-5.6 Luna / High access, native custom-agen
 support, and jq.
 
 ~~~sh
-codex plugin marketplace add DannyMac180/sol-advisor --ref main
+codex plugin marketplace add atebites-hub/sol-advisor --ref main
 codex plugin add sol-advisor@sol-advisor
 plugin_dir="$(codex plugin list --json | jq -r '.installed[] | select(.pluginId == "sol-advisor@sol-advisor") | .source.path')" && test -n "$plugin_dir" && test "$plugin_dir" != null && test -d "$plugin_dir" && test -f "$plugin_dir/scripts/install-agents.sh" && sh "$plugin_dir/scripts/install-agents.sh"
 ~~~

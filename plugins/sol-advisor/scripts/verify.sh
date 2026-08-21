@@ -777,6 +777,13 @@ pass "active release copy has no retired routing contract"
 readme_lines=$(wc -l < "$readme" | tr -d ' ')
 [ "$readme_lines" -le 110 ] || fail "README remains maintainer-sized ($readme_lines lines)"
 grep -Fq 'codex plugin marketplace add' "$readme" || fail "README omits marketplace quick start"
+grep -Fq 'codex plugin marketplace add atebites-hub/sol-advisor --ref main' "$readme" ||
+  fail "README marketplace quick start does not install from origin"
+jq -e '
+  .homepage == "https://github.com/atebites-hub/sol-advisor#readme" and
+  .repository == "https://github.com/atebites-hub/sol-advisor" and
+  .interface.websiteURL == "https://github.com/atebites-hub/sol-advisor"
+' "$manifest" >/dev/null || fail "manifest repository URLs do not identify origin"
 grep -Fq 'codex plugin add' "$readme" || fail "README omits plugin quick start"
 grep -Fq 'scripts/install-agents.sh' "$readme" || fail "README omits companion install"
 grep -Fq '/hooks' "$readme" || fail "README omits hook trust"
