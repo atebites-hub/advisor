@@ -25,6 +25,12 @@ codex plugin list --json | jq -e '
 Any other version is unverified until its executor arguments and artifact format are
 revalidated. Do not edit ODW, its installed source, or its cache to satisfy this check.
 
+Call the workflow tool with `cwd` set to the exact active Codex workspace. Do not
+substitute a temporary directory or the plugin install/cache path: ODW validates this
+boundary and writes its run evidence under `.odw/<name>/runs/<runId>/` there. For an
+otherwise read-only task, read-only applies to project source, not these evidence artifacts.
+Remove only the exact accepted run directory after inspection when cleanup is in scope.
+
 ## Locked model node
 
 Every inline script defines this wrapper once:

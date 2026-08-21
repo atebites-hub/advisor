@@ -744,6 +744,8 @@ grep -Fq 'const lunaAgent = (prompt, options = {}) => agent(prompt, {' "$odw_ref
 grep -Fq "executor: 'codex'" "$odw_reference" || fail "ODW reference omits Codex executor pin"
 grep -Fq "model: 'gpt-5.6-luna'" "$odw_reference" || fail "ODW reference omits Luna pin"
 grep -Fq "reasoningEffort: 'high'" "$odw_reference" || fail "ODW reference omits High pin"
+grep -Fq 'exact active Codex workspace' "$odw_reference" || fail "ODW reference permits a substituted workflow cwd"
+grep -Fq 'read-only applies to project source, not these evidence artifacts' "$odw_reference" || fail "ODW reference makes read-only workflows reject required run artifacts"
 grep -Fq '$plugin_dir/scripts/inspect-odw-run.sh' "$odw_reference" || fail "ODW reference does not resolve the installed inspector"
 grep -Fq 'Do not spawn subagents' "$odw_reference" || fail "ODW worker packet omits nested-agent boundary"
 grep -Fq 'Do not render the final verdict' "$odw_reference" || fail "ODW worker packet omits review boundary"
