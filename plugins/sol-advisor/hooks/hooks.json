@@ -7,7 +7,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "cat \"${PLUGIN_ROOT}/skills/orchestration/SKILL.md\"",
+            "command": "sh \"${PLUGIN_ROOT}/hooks/session-context.sh\"",
             "timeout": 5,
             "statusMessage": "Activating Sol Advisor"
           }

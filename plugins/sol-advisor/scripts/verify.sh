@@ -21,6 +21,7 @@ ui=$plugin_dir/skills/orchestration/agents/openai.yaml
 retired_contract=$plugin_dir/skills/orchestration/references/luna-task-lane.md
 hooks_config=$plugin_dir/hooks/hooks.json
 spawn_guard=$plugin_dir/hooks/enforce-luna-subagent.sh
+session_context=$plugin_dir/hooks/session-context.sh
 
 tmp_base=/tmp
 tmp_env=$(printenv TMPDIR 2>/dev/null || true)
@@ -183,7 +184,7 @@ RETIRED_SOL
   [ "$(shasum -a 256 "$target/$retired_sol_file" | awk '{print $1}')" = "$retired_sol_sha256s" ] || fail "retired Sol fixture digest drifted"
 }
 
-for required in "$installer" "$runtime_inspector" "$manifest" "$skill" "$contracts" "$operations" "$readme" "$ui" "$hooks_config" "$spawn_guard"; do
+for required in "$installer" "$runtime_inspector" "$manifest" "$skill" "$contracts" "$operations" "$readme" "$ui" "$hooks_config" "$spawn_guard" "$session_context"; do
   test -f "$required" || fail "required file missing: $required"
 done
 test ! -e "$retired_contract" || fail "retired separate workflow contract remains: $retired_contract"
@@ -204,18 +205,43 @@ jq -e '
   (.hooks.SessionStart[0].hooks | length) == 1 and
   .hooks.SessionStart[0].hooks[0].type == "command" and
   .hooks.SessionStart[0].hooks[0].command ==
-    "cat \"${PLUGIN_ROOT}/skills/orchestration/SKILL.md\"" and
+    "sh \"${PLUGIN_ROOT}/hooks/session-context.sh\"" and
   .hooks.SessionStart[0].hooks[0].timeout == 5 and
   .hooks.SessionStart[0].hooks[0].statusMessage == "Activating Sol Advisor"
 ' "$hooks_config" >/dev/null || fail "automatic SessionStart hook configuration is invalid"
 
 activation_command=$(jq -r '.hooks.SessionStart[0].hooks[0].command' "$hooks_config")
-activation_output=$tmp_dir/session-start-context.md
-PLUGIN_ROOT=$plugin_dir sh -c "$activation_command" </dev/null > "$activation_output" ||
-  fail "automatic SessionStart hook command failed"
-cmp -s "$skill" "$activation_output" ||
-  fail "automatic SessionStart hook did not emit the canonical orchestration skill"
-pass "automatic SessionStart hook emits canonical orchestration context"
+run_session_context() {
+  printf '%s\n' "$1" | PLUGIN_ROOT=$plugin_dir sh -c "$activation_command"
+}
+
+sol_context=$tmp_dir/sol-session-context.md
+run_session_context '{"hook_event_name":"SessionStart","source":"startup","model":"gpt-5.6-sol"}' > "$sol_context" ||
+  fail "Sol SessionStart context command failed"
+cmp -s "$skill" "$sol_context" || fail "Sol SessionStart did not emit the canonical orchestration skill"
+
+luna_context=$tmp_dir/luna-session-context.md
+run_session_context '{"hook_event_name":"SessionStart","source":"startup","model":"gpt-5.6-luna"}' > "$luna_context" ||
+  fail "Luna SessionStart context command failed"
+grep -Fq '# Sol Advisor Luna / High Worker' "$luna_context" || fail "Luna SessionStart omitted worker identity"
+grep -Fq 'Do not spawn subagents' "$luna_context" || fail "Luna SessionStart omitted child-spawn boundary"
+grep -Fq 'Do not render the final verdict' "$luna_context" || fail "Luna SessionStart omitted review boundary"
+if grep -Fq 'SELECTIVE ROUTE' "$luna_context"; then fail "Luna SessionStart emitted primary-task routing context"; fi
+if cmp -s "$skill" "$luna_context"; then fail "Luna SessionStart emitted the primary orchestration skill"; fi
+
+for invalid_session_payload in \
+  'not-json' \
+  '[]' \
+  '{"hook_event_name":"SessionStart","source":"startup","model":"gpt-5.6-sol"}{"hook_event_name":"SessionStart","source":"startup","model":"gpt-5.6-sol"}' \
+  '{"hook_event_name":"SessionStart","source":"startup"}' \
+  '{"hook_event_name":"SessionStart","source":"invalid","model":"gpt-5.6-sol"}' \
+  '{"hook_event_name":"PreToolUse","source":"startup","model":"gpt-5.6-sol"}'
+do
+  if run_session_context "$invalid_session_payload" >/dev/null 2>&1; then
+    fail "SessionStart context accepted invalid input: $invalid_session_payload"
+  fi
+done
+pass "model-sensitive SessionStart emits canonical Sol context, bounded Luna context, and rejects invalid input"
 
 run_spawn_guard() {
   printf '%s\n' "$1" | sh "$spawn_guard"
@@ -606,6 +632,7 @@ pass "obsolete single-lane claims and second Terra role absent"
 sh -n "$installer"
 sh -n "$runtime_inspector"
 sh -n "$script_dir/verify.sh"
+sh -n "$session_context"
 pass "shell syntax"
 
 printf '%s\n' "VERIFY PASSED: Sol Advisor v0.7.1 automatic Sol / Ultra and Luna / High checks completed in $tmp_dir"
