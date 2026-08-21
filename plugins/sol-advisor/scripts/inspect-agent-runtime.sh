@@ -136,6 +136,12 @@ if ! jq -ce -s --arg expected_thread_id "$thread_id" '
       error("conflicting permission profile types")
     elif ($cwds | unique | length) != 1 then
       error("conflicting working directories")
+    elif $agent_role != "sol_advisor_luna_subagent" then
+      error("unexpected agent role")
+    elif $models[0] != "gpt-5.6-luna" then
+      error("unexpected model")
+    elif $efforts[0] != "high" then
+      error("unexpected effort")
     else
       {
         thread_id: $session_thread_id,

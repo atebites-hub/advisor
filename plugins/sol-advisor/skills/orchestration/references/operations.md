@@ -4,52 +4,38 @@ This is the maintainer and operator reference for Sol Advisor's native custom-ag
 workflow. Keep the README user-facing; use this page when installing, delegating,
 inspecting routing, or validating a release.
 
-## Role pins and spawn contract
-
-The installed TOMLs are the source of truth:
+## Role pin and spawn contract
 
 | Role type | Model | Effort | Use |
 |---|---|---|---|
-| sol_advisor_luna_implementer | gpt-5.6-luna | max | Delegate/full bounded routine implementation |
-| sol_advisor_terra_implementer | gpt-5.6-terra | high | Delegate/full judgment-heavy or high-risk implementation |
-| sol_advisor_sol_reviewer | gpt-5.6-sol | high | Audit/full fresh review; requests read-only sandbox |
-
-Native spawn requests name the role and use a fresh context:
+| sol_advisor_luna_subagent | gpt-5.6-luna | high | Bounded implementation, research, evidence, and testing |
 
 ~~~text
-agent_type: sol_advisor_luna_implementer
+agent_type: sol_advisor_luna_subagent
 fork_turns: none
 ~~~
 
-Use the Terra type only when the selected delegate or full route needs it:
+Do not attach model or reasoning overrides.
 
-~~~text
-agent_type: sol_advisor_terra_implementer
-fork_turns: none
-~~~
+## Hook trust and boundary
 
-Use a fresh Sol reviewer only for audit or full after parent verification:
+The plugin's synchronous `PreToolUse` hook denies supported child spawns that do not
+use the exact contract above. Review and trust it through `/hooks` after installation
+or every hook definition change. Disabled, untrusted, failed, and specialized opt-out
+paths are not covered; runtime evidence remains required.
 
-~~~text
-agent_type: sol_advisor_sol_reviewer
-fork_turns: none
-~~~
+## Installation and migration
 
-Do not attach model or reasoning overrides. A missing, conflicting, unavailable, or
-unobservable role/model/effort is a hard stop; never substitute another role.
-
-## Selective route declaration, preflight, and caching
-
-The primary session must be Sol / High. Companion installation is separate from task
-routing because plugin installation does not register user-owned TOMLs.
-
-At installation or update time, run the repository-relative installer and its exactness
-check:
+At installation or update time, run:
 
 ~~~sh
 sh plugins/sol-advisor/scripts/install-agents.sh
 sh plugins/sol-advisor/scripts/install-agents.sh --check
 ~~~
+
+The installer creates one Luna / High profile and removes only byte-exact historical
+Sol Advisor profiles. Any modified, unsafe, unreadable, or conflicting destination
+stops the whole preflight before mutation. Unrelated agent files remain untouched.
 
 When operating from an installed skill, resolve the same script relative to this
 reference's parent skill:
@@ -60,63 +46,23 @@ installer="$skill_dir/../../scripts/install-agents.sh"
 sh "$installer" --check
 ~~~
 
-The installer is fail-closed and performs its own post-install exactness check. It
-recognizes only byte-exact historical templates, including the shipped v0.2.0 profiles
-and the v0.5.0 Luna/Terra profiles during a v0.5.1 update. Modified/unsafe/nonregular/
-symlinked/conflicting destinations remain refusals, and all mutations are preflighted.
+## Route preflight
 
-The root emits one machine-auditable declaration before its first task tool call:
+The primary task must be Sol / Ultra. `solo` needs no child. `delegate` and any `audit`
+evidence child require `install-agents.sh --check --check-role luna`. Cache a successful
+check only for the current task and invalidate it after installation or configuration
+changes.
 
-~~~text
-SELECTIVE ROUTE
-mode: solo | delegate | audit | full
-risk: <concise, task-specific rationale>
-~~~
+## Accepted runtime evidence
 
-Solo is the default. One auxiliary is the default maximum; full is an explicit broad
-or high-risk exception. The root may emit a later declaration only to escalate when
-newly observed risk justifies it. It records that evidence and never silently
-downgrades.
+Public spawn details are authoritative. When they omit model or effort, run the
+repository-relative `../../scripts/inspect-agent-runtime.sh` for the exact child thread.
+Accept only `sol_advisor_luna_subagent`, `gpt-5.6-luna`, and `high`. Missing,
+conflicting, or different evidence invalidates the result; the inspector is not a
+model-selection fallback.
 
-The existing --check flag verifies all three roles. For task-scoped preflight, check
-only the auxiliaries selected by the declaration; every check is non-mutating and
-fail-closed:
-
-| Route | Required companion checks |
-|---|---|
-| solo | None |
-| delegate (Luna) | `--check --check-role luna` |
-| delegate (Terra) | `--check --check-role terra` |
-| audit | `--check --check-role sol` |
-| full (Luna) | `--check --check-role luna --check-role sol` |
-| full (Terra) | `--check --check-role terra --check-role sol` |
-
-For example:
-
-~~~sh
-sh plugins/sol-advisor/scripts/install-agents.sh --check --check-role luna
-sh plugins/sol-advisor/scripts/install-agents.sh --check --check-role sol
-~~~
-
-Unknown or missing role arguments fail before any destination mutation. A selective
-check ignores unselected role destinations, while the all-role --check behavior
-remains unchanged. Cache successful checks only for the task; never carry them across
-later tasks, installation/update, or routing/configuration changes.
-
-Luna / Max is for bounded, fully specified work. Terra / High is selected for
-judgment-heavy, high-risk, context-heavy, or wide-blast-radius work. A Luna result
-may justify a declared Terra escalation only when it shows newly observed risk. One
-corrected Luna attempt is reserved for a specification error and is not a prerequisite
-for Terra.
-
-If public metadata omits model or effort, use the local inspector below as a fallback
-for those omitted fields only. Do not use it to replace available public evidence.
-
-## Runtime routing evidence
-
-The public spawn/details record is authoritative for the selected role and any exposed
-model/effort. When model or effort is omitted, resolve the helper relative to the
-installed skill and inspect the exact native thread ID:
+When operating from an installed skill, resolve the helper relative to this reference's
+parent skill and inspect the exact native thread ID:
 
 ~~~sh
 skill_dir=<directory-containing-this-SKILL.md>
@@ -136,46 +82,11 @@ conflicting model/effort/sandbox/permission/working-directory values. It never p
 prompts, messages, environment variables, tokens, configuration, or arbitrary rollout
 payloads.
 
-Accepted routing is Luna / max for bounded delegate/full implementation, Terra / high
-for higher-risk delegate/full implementation, and Sol / high for audit/full review.
-If public and local evidence both exist, they must agree. The local inspector is not a
-model-selection fallback.
+## Parent acceptance
 
-## Read-only reviewer interpretation
-
-The reviewer TOML requests sandbox_mode = read-only. Capture the observed sandbox
-policy type and permission profile type from public metadata or the inspector:
-
-- Observed read-only sandbox: isolation is enforced.
-- Broader host policy: continue only when hard isolation is not required, the prompt
-  forbids edits, and the parent captures exact before/after repository and artifact
-  state. Report the broader policy and profile as residual risk.
-- Unobservable isolation, required hard isolation, or any mutation: stop the review and
-  do not claim read-only isolation.
-
-A reviewer returns exactly ship, fix-first, or rethink. A fix invalidates the prior
-verdict; parent verification and a new fresh review are required.
-
-## Worker packet and parent acceptance
-
-Every Luna or Terra prompt uses the five-part packet in role-contracts.md:
-
-- OBJECTIVE
-- FILES AND OWNERSHIP
-- INTERFACES
-- CONSTRAINTS
-- VERIFICATION
-
-It must also request the structured implementation report. The parent owns architecture,
-complete diff inspection, verification reruns, correction/escalation decisions, and
-acceptance. Worker claims never replace direct inspection.
-
-In solo, the root plans, implements, tests, and self-reviews with no auxiliary. In
-delegate, one selected Luna or Terra implementer completes the spec and the root
-verifies with no fresh reviewer. In audit, the root implements and verifies, then a
-fresh Sol reviewer reviews. In full, one selected implementer completes the spec, the
-root verifies, and a fresh Sol reviewer reviews. Auxiliary work substitutes for root
-work; it does not duplicate it. A reviewer never fixes its own findings.
+Every child receives the five-part packet from role-contracts.md. The Sol / Ultra
+primary task owns architecture, diff or artifact inspection, verification reruns,
+corrections, final review, and acceptance. A child never renders the final verdict.
 
 ## Maintainer verification
 
@@ -188,6 +99,6 @@ git status --short
 git diff --stat
 ~~~
 
-The verifier covers the v0.6.0 manifest, exact three-role TOMLs, selective-routing
-contracts, concise README journey, absence of retired workflow references, installer
-safety fixtures, Luna runtime evidence, JSON/TOML validity, and shell syntax.
+The v0.7.0 verifier covers one role, hook fixtures, Luna / High runtime evidence,
+three routes, JSON/TOML validity, shell syntax, installer migration safety, and
+absence of retired workflow references.

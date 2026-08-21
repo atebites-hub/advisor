@@ -1,107 +1,82 @@
 ---
 name: orchestration
-description: "Codex-native risk-gated selective routing: default solo delivery, targeted native delegation or audit, and exceptional full review."
+description: "Codex-native routing with a Sol / Ultra primary task, Luna / High children, and primary-task review."
 ---
 
 # Sol Advisor Orchestration
 
-Act as the architect. Own the user's intent, architecture, route choice, decomposition,
-implementation or delegation, parent verification, escalation decisions, and final
-acceptance. Selective routing has four exact modes: `solo`, `delegate`, `audit`, and
-`full`. Solo is the default. One auxiliary agent is the default maximum; full is an
-explicit broad or high-risk exception.
+Act as the architect and final reviewer. Own the user's intent, architecture, route,
+decomposition, material judgment, parent verification, review, and acceptance. Routes
+are exactly `solo`, `delegate`, and `audit`. Solo is the default.
+One child is the default maximum; use more only for explicitly independent parallel work.
 
-Read [references/role-contracts.md](references/role-contracts.md) before the first
-delegation. Use [references/operations.md](references/operations.md) for exact spawn,
-preflight, runtime-evidence, isolation, and maintainer procedures.
+Read [references/role-contracts.md](references/role-contracts.md) before delegation.
+Use [references/operations.md](references/operations.md) for hook trust, exact spawn,
+preflight, runtime evidence, migration, and release procedures.
 
-## Confirm the primary session
+## Confirm the primary task
 
-Run the primary Codex session on gpt-5.6-sol with high reasoning. Verify the current
-model and effort when runtime metadata exposes them. If either differs, tell the user
-to select Sol / High and stop before delegation. If runtime metadata does not expose
-them, ask the user to confirm Sol / High and stop until confirmed. A skill cannot
-change the primary model itself; never assume or claim this prerequisite is satisfied.
+Run the primary Codex task on gpt-5.6-sol with ultra reasoning. Verify model and effort
+when runtime metadata exposes them. If either differs, stop before task tools and ask
+the user to select Sol / Ultra. If effort is not observable, ask the user to confirm it
+and stop until confirmed. A skill cannot change the primary model or effort.
 
 ## Declare the route before task tools
 
-Before the first task tool call, emit one machine-auditable declaration:
+Emit exactly one declaration before the first task tool call:
 
 ~~~text
 SELECTIVE ROUTE
-mode: solo | delegate | audit | full
-risk: <concise, task-specific rationale>
+mode: solo | delegate | audit
+risk: concise task-specific rationale
 ~~~
 
-No task tool call may precede this declaration. Choose `solo` unless a stated risk
-justifies another mode. A later declaration may only escalate the route when newly
-observed risk justifies it; never silently downgrade. Record the evidence for an
-escalation. Details and the task-scoped preflight matrix are in operations.md.
+No task tool call may precede this declaration. Choose `solo` unless delegation or a
+review-only task has a concrete benefit. Change the route only when new evidence
+justifies it; record that evidence and never silently downgrade.
 
-## Preflight selected auxiliaries only
+## Use only the Luna / High child
 
-Confirm Sol / High in the primary session. Preflight only an auxiliary selected by the
-declared route: none for solo; Luna / Max or Terra / High for delegate; fresh Sol / High
-for audit; and the selected implementer plus fresh Sol reviewer for full. Public metadata
-for role, model, and effort is authoritative. If it omits a model or effort, use the
-local inspector only for that omitted field. Missing, conflicting, unavailable, or
-unobservable evidence stops the affected lane; never silently substitute a role,
-model, effort, or reviewer.
+For any delegation, verify the installed role with `install-agents.sh --check
+--check-role luna`. Treat an untrusted or disabled plugin hook as inactive enforcement
+and stop before delegation. Spawn exactly:
 
-## Route delivery without duplication
+~~~text
+agent_type: sol_advisor_luna_subagent
+fork_turns: none
+~~~
 
-- `solo`: root plans, implements, tests, and self-reviews; spawn no auxiliary.
-- `delegate`: select Luna / Max for bounded, fully specified work, or Terra / High for
-  judgment-heavy, high-risk, context-heavy, or wide-blast-radius work. The selected
-  implementer executes the complete spec; root verifies; do not request a fresh review.
-- `audit`: root implements and verifies; a fresh read-only Sol / High reviewer reviews
-  the accumulated diff; spawn no implementer.
-- `full`: only for an explicit broad or high-risk exception. Select one implementer,
-  root verifies, then a fresh read-only Sol / High reviewer reviews.
+Do not attach model or reasoning overrides. Public spawn metadata is authoritative for
+role, model, and effort. Use the local runtime inspector only for omitted fields. The
+accepted tuple is `sol_advisor_luna_subagent`, `gpt-5.6-luna`, and `high`; missing or
+conflicting evidence invalidates the child result.
 
-Auxiliary work must substitute for root work, not duplicate it. A Luna result may
-justify escalation to Terra / High only when it reveals newly observed complexity,
-risk, wide blast radius, or misclassification. A corrected Luna attempt is reserved
-for a specification error and is not a prerequisite for Terra. Any route change must
-be declared and evidenced; do not silently downgrade.
+## Route delivery
 
-## Keep architect work in the primary session
+- `solo`: implement, test, verify, and self-review in the primary task; spawn no child.
+- `delegate`: give one Luna / High child a complete bounded packet; then inspect its
+  complete output, rerun verification, review, and accept or reject it in the primary
+  task.
+- `audit`: review the target directly in the primary task. A Luna / High child may
+  gather bounded evidence but cannot render the verdict.
 
-Keep these responsibilities in the primary session:
+Keep judgment-heavy, high-risk, architectural, ambiguous, or wide-blast-radius work in
+the Sol / Ultra primary task. Child work substitutes for primary-task work; do not
+duplicate it.
 
-- Resolve requirements and material ambiguity.
-- Choose architecture, interfaces, decomposition, and selective route.
-- Write the complete five-part worker specification for any selected implementer.
-- Inspect the actual diff and rerun verification.
-- Decide whether newly observed risk warrants escalation.
-- Judge the reviewer verdict when the route includes review and accept the deliverable.
+## Specify and verify every child task
 
-Every worker prompt must contain OBJECTIVE, FILES AND OWNERSHIP, INTERFACES,
-CONSTRAINTS, VERIFICATION, and the structured implementation return in
-[the role contracts](references/role-contracts.md). State the exact owned files,
-preserve concurrent edits, and never silently widen scope.
+Every child packet contains OBJECTIVE, FILES AND OWNERSHIP, INTERFACES, CONSTRAINTS,
+VERIFICATION, and the structured return defined in the role contracts. State exact
+owned files, preserve concurrent edits, and do not widen scope.
 
-Treat worker reports as claims. Confirm the complete diff, changed-file scope, requested
-checks, and artifact/runtime evidence in the parent session. Do not duplicate the
-selected implementer's work in the primary session.
+Treat child reports as claims. Inspect the complete diff or artifact, verify changed
+scope, rerun requested checks, and confirm runtime evidence. The primary task performs
+final review after every correction; no reviewer child exists.
 
-## Review only when the route includes it
+## State the platform boundary truthfully
 
-For `audit` and `full`, after parent verification, spawn a new native Sol / High
-reviewer. The reviewer must remain behaviorally read-only, inspect the actual
-accumulated diff, and return exactly ship, fix-first, or rethink. A reviewer never
-implements its own fixes. `solo` and `delegate` do not receive a fresh reviewer.
-
-- ship: report completion with the verification evidence.
-- fix-first applies only to `audit` and `full`:
-  - audit: the root implements the required correction, re-verifies, and obtains a new
-    fresh reviewer.
-  - full: the selected implementer handles the required correction, the root
-    re-verifies, and a new fresh reviewer reviews.
-  - solo and delegate: no fresh reviewer is added unless a newly observed,
-    risk-evidenced route escalation is declared; never silently add one.
-- rethink: revise the architecture and do not report completion.
-
-Any implementation correction invalidates the prior verdict. Apply the observed sandbox
-and permission profile rules in the operations reference; never claim enforced
-read-only isolation when it was not observed.
+The trusted plugin hook blocks supported `spawn_agent` calls, including the `Agent`
+alias and code-mode calls. It is not an unbypassable platform policy: disabled,
+untrusted, failed, or specialized opt-out paths are outside the guard. Never claim
+enforcement without observed hook trust and runtime evidence.

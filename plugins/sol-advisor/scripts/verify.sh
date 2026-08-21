@@ -385,77 +385,94 @@ runtime_id=11111111-1111-7111-8111-111111111111
 runtime_rollout=$runtime_day/rollout-2026-08-15T00-00-00-$runtime_id.jsonl
 printf '%s\n' \
   '{"type":"response_item","payload":{"prompt":"DO_NOT_LEAK_PROMPT"}}' \
-  "{\"type\":\"session_meta\",\"payload\":{\"id\":\"$runtime_id\",\"parent_thread_id\":\"00000000-0000-7000-8000-000000000000\",\"agent_role\":\"sol_advisor_luna_implementer\",\"agent_path\":\"/root/fixture\",\"model_provider\":\"openai\",\"cwd\":\"/fixture\"}}" \
-  '{"type":"turn_context","payload":{"model":"gpt-5.6-luna","effort":"max","sandbox_policy":{"type":"danger-full-access"},"permission_profile":{"type":"disabled"},"cwd":"/fixture"}}' \
+  "{\"type\":\"session_meta\",\"payload\":{\"id\":\"$runtime_id\",\"parent_thread_id\":\"00000000-0000-7000-8000-000000000000\",\"agent_role\":\"sol_advisor_luna_subagent\",\"agent_path\":\"/root/fixture\",\"model_provider\":\"openai\",\"cwd\":\"/fixture\"}}" \
+  '{"type":"turn_context","payload":{"model":"gpt-5.6-luna","effort":"high","sandbox_policy":{"type":"danger-full-access"},"permission_profile":{"type":"disabled"},"cwd":"/fixture"}}' \
   > "$runtime_rollout"
 runtime_output=$(sh "$runtime_inspector" --sessions-dir "$runtime_sessions" "$runtime_id")
 printf '%s\n' "$runtime_output" | jq -e --arg id "$runtime_id" '
-  .thread_id == $id and .agent_role == "sol_advisor_luna_implementer"
-  and .model == "gpt-5.6-luna" and .effort == "max"
+  .thread_id == $id and .agent_role == "sol_advisor_luna_subagent"
+  and .model == "gpt-5.6-luna" and .effort == "high"
   and .sandbox_policy_type == "danger-full-access"
   and .permission_profile_type == "disabled"
-' >/dev/null || fail "runtime inspector returned wrong Luna/Max evidence"
+' >/dev/null || fail "runtime inspector returned wrong Luna/High evidence"
 if printf '%s\n' "$runtime_output" | grep -Fq DO_NOT_LEAK; then fail "runtime inspector leaked payload"; fi
 if sh "$runtime_inspector" --sessions-dir "$runtime_sessions" invalid >/dev/null 2>&1; then fail "runtime inspector accepted invalid id"; fi
 zero_id=22222222-2222-7222-8222-222222222222
 if sh "$runtime_inspector" --sessions-dir "$runtime_sessions" "$zero_id" >/dev/null 2>&1; then fail "runtime inspector accepted zero matches"; fi
-pass "runtime inspector Luna/Max routing and safe refusal"
+assert_runtime_rejected() {
+  fixture_id=$1
+  fixture_role=$2
+  fixture_model=$3
+  fixture_effort=$4
+  fixture_rollout=$runtime_day/rollout-2026-08-15T00-00-00-$fixture_id.jsonl
+  printf '%s\n' \
+    "{\"type\":\"session_meta\",\"payload\":{\"id\":\"$fixture_id\",\"parent_thread_id\":\"00000000-0000-7000-8000-000000000000\",\"agent_role\":\"$fixture_role\",\"agent_path\":\"/root/fixture\",\"model_provider\":\"openai\",\"cwd\":\"/fixture\"}}" \
+    "{\"type\":\"turn_context\",\"payload\":{\"model\":\"$fixture_model\",\"effort\":\"$fixture_effort\",\"sandbox_policy\":{\"type\":\"danger-full-access\"},\"permission_profile\":{\"type\":\"disabled\"},\"cwd\":\"/fixture\"}}" \
+    > "$fixture_rollout"
+  if sh "$runtime_inspector" --sessions-dir "$runtime_sessions" "$fixture_id" >/dev/null 2>&1; then
+    fail "runtime inspector accepted $fixture_role / $fixture_model / $fixture_effort"
+  fi
+}
+
+assert_runtime_rejected 33333333-3333-7333-8333-333333333333 worker gpt-5.6-luna high
+assert_runtime_rejected 44444444-4444-7444-8444-444444444444 sol_advisor_luna_subagent gpt-5.6-sol high
+assert_runtime_rejected 55555555-5555-7555-8555-555555555555 sol_advisor_luna_subagent gpt-5.6-luna max
+
+missing_id=66666666-6666-7666-8666-666666666666
+printf '%s\n' \
+  "{\"type\":\"session_meta\",\"payload\":{\"id\":\"$missing_id\",\"agent_role\":\"sol_advisor_luna_subagent\"}}" \
+  '{"type":"turn_context","payload":{"model":"gpt-5.6-luna"}}' \
+  > "$runtime_day/rollout-2026-08-15T00-00-00-$missing_id.jsonl"
+if sh "$runtime_inspector" --sessions-dir "$runtime_sessions" "$missing_id" >/dev/null 2>&1; then
+  fail "runtime inspector accepted missing effort"
+fi
+
+conflict_id=77777777-7777-7777-8777-777777777777
+printf '%s\n' \
+  "{\"type\":\"session_meta\",\"payload\":{\"id\":\"$conflict_id\",\"agent_role\":\"sol_advisor_luna_subagent\"}}" \
+  '{"type":"turn_context","payload":{"model":"gpt-5.6-luna","effort":"high"}}' \
+  '{"type":"turn_context","payload":{"model":"gpt-5.6-luna","effort":"max"}}' \
+  > "$runtime_day/rollout-2026-08-15T00-00-00-$conflict_id.jsonl"
+if sh "$runtime_inspector" --sessions-dir "$runtime_sessions" "$conflict_id" >/dev/null 2>&1; then
+  fail "runtime inspector accepted conflicting effort"
+fi
+
+duplicate_id=88888888-8888-7888-8888-888888888888
+mkdir -p "$runtime_sessions/2026/08/16" "$runtime_sessions/2026/08/17"
+for duplicate_day in 16 17; do
+  printf '%s\n' \
+    "{\"type\":\"session_meta\",\"payload\":{\"id\":\"$duplicate_id\",\"agent_role\":\"sol_advisor_luna_subagent\"}}" \
+    '{"type":"turn_context","payload":{"model":"gpt-5.6-luna","effort":"high"}}' \
+    > "$runtime_sessions/2026/08/$duplicate_day/rollout-2026-08-$duplicate_day-T00-00-00-$duplicate_id.jsonl"
+done
+if sh "$runtime_inspector" --sessions-dir "$runtime_sessions" "$duplicate_id" >/dev/null 2>&1; then
+  fail "runtime inspector accepted duplicate rollout matches"
+fi
+pass "runtime inspector Luna/High tuple and safe refusals"
 
 for document in "$contracts" "$operations"; do
-  grep -Fq 'agent_type: sol_advisor_luna_implementer' "$document" || fail "missing Luna spawn in $document"
-  grep -Fq 'agent_type: sol_advisor_terra_implementer' "$document" || fail "missing Terra spawn in $document"
-  grep -Fq 'agent_type: sol_advisor_sol_reviewer' "$document" || fail "missing Sol spawn in $document"
+  grep -Fq 'agent_type: sol_advisor_luna_subagent' "$document" || fail "missing Luna subagent spawn in $document"
   grep -Fq 'fork_turns: none' "$document" || fail "missing fresh context in $document"
-  if grep -Eq 'agent_type:.*terra_max' "$document"; then fail "retired Terra-Max spawn remains in $document"; fi
   if grep -Eq '^[[:space:]]*(model|reasoning_effort):' "$document"; then fail "per-spawn override remains in $document"; fi
 done
-grep -Fq 'references/operations.md' "$skill" || fail "skill does not link operations reference"
+grep -Fq 'gpt-5.6-sol with ultra reasoning' "$skill" || fail "skill omits primary Sol / Ultra requirement"
+grep -Fq 'mode: solo | delegate | audit' "$skill" || fail "skill omits exact three-route declaration"
+grep -Fq 'No task tool call may precede this declaration' "$skill" || fail "skill permits tool-before-route"
+grep -Fq 'One child is the default maximum' "$skill" || fail "skill omits child limit"
+grep -Fq 'final review' "$skill" || fail "skill omits primary review ownership"
 grep -Fq '../../scripts/install-agents.sh' "$operations" || fail "operations does not resolve installer relatively"
 grep -Fq '../../scripts/inspect-agent-runtime.sh' "$operations" || fail "operations does not resolve inspector relatively"
-grep -Fq 'SELECTIVE ROUTE' "$skill" || fail "skill omits route declaration"
-grep -Fq 'mode: solo | delegate | audit | full' "$skill" || fail "skill omits exact route modes"
-grep -Fq 'No task tool call may precede this declaration' "$skill" || fail "skill permits tool-before-route"
-grep -Fq 'Solo is the default' "$skill" || fail "skill omits solo default"
-grep -Fq 'One auxiliary agent is the default maximum' "$skill" || fail "skill omits auxiliary limit"
-grep -Fq 'A later declaration may only escalate the route when newly' "$skill" || fail "skill omits escalation gate"
-grep -Fq 'never silently downgrade' "$skill" || fail "skill permits silent downgrade"
-grep -Fqi 'public metadata' "$skill" || fail "skill lacks public-metadata evidence rule"
-grep -Fqi 'local inspector' "$skill" || fail "skill lacks runtime fallback rule"
-grep -Fqi 'parent captures and verifies exact before-and-after' "$contracts" || fail "contracts lack behavioral read-only state check"
-for mode in solo delegate audit full; do
+grep -Fq '/hooks' "$operations" || fail "operations omits hook trust"
+for mode in solo delegate audit; do
   grep -Fq "\`$mode\`" "$skill" || fail "skill omits $mode mode"
   grep -Fq "\`$mode\`" "$contracts" || fail "contracts omit $mode mode"
 done
-grep -Fqi 'auxiliary work must substitute for root work' "$skill" || fail "skill permits duplicate auxiliary work"
-grep -Fqi 'auxiliary work substitutes for root work' "$contracts" || fail "contracts permit duplicate auxiliary work"
-grep -Fqi 'first Luna result' "$contracts" || fail "contracts omit Luna-to-Terra escalation"
-grep -Fqi 'not a prerequisite' "$contracts" || fail "contracts make corrected Luna mandatory"
-grep -Fq 'do not request a fresh review' "$skill" || fail "skill makes delegate review mandatory"
-grep -Fq '`solo` and `delegate` do not receive a fresh reviewer' "$skill" || fail "skill makes solo/delegate review mandatory"
-grep -Fq 'audit: the root implements the required correction, re-verifies, and obtains a new' "$skill" || fail "skill does not assign audit corrections to root"
-grep -Fq 'full: the selected implementer handles the required correction, the root' "$skill" || fail "skill does not assign full corrections to selected implementer"
-if grep -Fq 'fix-first: delegate the required correction' "$skill"; then fail "skill retains unconditional fix-first delegation"; fi
-grep -Fq 'On `fix-first`, the root implements the' "$contracts" || fail "contracts do not assign audit corrections to root"
-grep -Fq 'On `fix-first`, the selected implementer handles the correction' "$contracts" || fail "contracts do not assign full corrections to selected implementer"
-if grep -Fqi 'commitment-boundary sol consult' "$contracts"; then fail "contracts retain an ungated commitment-boundary consult"; fi
-pass "native role contracts, selective route declaration, escalation, and correction checks"
-
-for phrase in \
-  'agent_type: sol_advisor_luna_implementer' \
-  'agent_type: sol_advisor_terra_implementer' \
-  'agent_type: sol_advisor_sol_reviewer' \
-  'fork_turns: none' \
-  'SELECTIVE ROUTE' \
-  'solo | delegate | audit | full' \
-  'Solo is the default' \
-  'one auxiliary is the default maximum' \
-  'only to escalate when' \
-  'local inspector' \
-  'sandbox_mode = read-only' \
-  'install-agents.sh --check'; do
-  grep -Fqi "$phrase" "$operations" || fail "operations reference omits: $phrase"
+for active_document in "$skill" "$contracts" "$operations"; do
+  if grep -Eqi 'gpt-5\.6-terra|Luna / Max|sol_advisor_(terra_implementer|sol_reviewer)|mode:.*full|\`full\`' "$active_document"; then
+    fail "retired active routing remains in $active_document"
+  fi
 done
-pass "operations reference preserves selective native operational detail"
+pass "Sol / Ultra primary and Luna / High child contracts are consistent"
 
 readme_lines=$(wc -l < "$readme" | tr -d ' ')
 [ "$readme_lines" -le 110 ] || fail "README remains maintainer-sized ($readme_lines lines)"
