@@ -1,0 +1,18 @@
+{
+  "description": "Require every supported subagent spawn to use Sol Advisor's fresh Luna / High profile.",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "spawn_agent|Agent",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"${PLUGIN_ROOT}/hooks/enforce-luna-subagent.sh\"",
+            "timeout": 5,
+            "statusMessage": "Enforcing Luna / High subagents"
+          }
+        ]
+      }
+    ]
+  }
+}

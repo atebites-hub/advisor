@@ -19,6 +19,8 @@ operations=$plugin_dir/skills/orchestration/references/operations.md
 readme=$repo_dir/README.md
 ui=$plugin_dir/skills/orchestration/agents/openai.yaml
 retired_contract=$plugin_dir/skills/orchestration/references/luna-task-lane.md
+hooks_config=$plugin_dir/hooks/hooks.json
+spawn_guard=$plugin_dir/hooks/enforce-luna-subagent.sh
 
 tmp_base=/tmp
 tmp_env=$(printenv TMPDIR 2>/dev/null || true)
@@ -156,11 +158,49 @@ V050_TERRA
   [ "$(shasum -a 256 "$target/$terra_file" | awk '{print $1}')" = "$legacy_terra_v050_sha256" ] || fail "v0.5.0 Terra fixture digest drifted"
 }
 
-for required in "$installer" "$runtime_inspector" "$manifest" "$skill" "$contracts" "$operations" "$readme" "$ui"; do
+for required in "$installer" "$runtime_inspector" "$manifest" "$skill" "$contracts" "$operations" "$readme" "$ui" "$hooks_config" "$spawn_guard"; do
   test -f "$required" || fail "required file missing: $required"
 done
 test ! -e "$retired_contract" || fail "retired separate workflow contract remains: $retired_contract"
 pass "required files present and retired contract absent"
+
+jq -e '
+  (.hooks.PreToolUse | length) == 1 and
+  .hooks.PreToolUse[0].matcher == "spawn_agent|Agent" and
+  (.hooks.PreToolUse[0].hooks | length) == 1 and
+  .hooks.PreToolUse[0].hooks[0].type == "command" and
+  (.hooks.PreToolUse[0].hooks[0].command |
+    contains("${PLUGIN_ROOT}/hooks/enforce-luna-subagent.sh"))
+' "$hooks_config" >/dev/null || fail "spawn guard hook configuration is invalid"
+
+run_spawn_guard() {
+  printf '%s\n' "$1" | sh "$spawn_guard"
+}
+
+assert_spawn_denied() {
+  label=$1
+  payload=$2
+  output=$(run_spawn_guard "$payload") || fail "$label guard invocation failed"
+  printf '%s\n' "$output" | jq -e '
+    .hookSpecificOutput.hookEventName == "PreToolUse" and
+    .hookSpecificOutput.permissionDecision == "deny" and
+    (.hookSpecificOutput.permissionDecisionReason | type == "string" and length > 0)
+  ' >/dev/null || fail "$label was not denied with a supported PreToolUse response"
+}
+
+allowed_payload='{"hook_event_name":"PreToolUse","tool_name":"spawn_agent","tool_input":{"agent_type":"sol_advisor_luna_subagent","fork_turns":"none","task_name":"fixture","message":"bounded fixture"}}'
+allowed_output=$(run_spawn_guard "$allowed_payload") || fail "compliant Luna spawn guard invocation failed"
+[ -z "$allowed_output" ] || fail "compliant Luna spawn emitted unexpected output"
+
+assert_spawn_denied "missing role" '{"hook_event_name":"PreToolUse","tool_name":"spawn_agent","tool_input":{"fork_turns":"none"}}'
+assert_spawn_denied "built-in worker" '{"hook_event_name":"PreToolUse","tool_name":"spawn_agent","tool_input":{"agent_type":"worker","fork_turns":"none"}}'
+assert_spawn_denied "retired Terra role" '{"hook_event_name":"PreToolUse","tool_name":"spawn_agent","tool_input":{"agent_type":"sol_advisor_terra_implementer","fork_turns":"none"}}'
+assert_spawn_denied "retired Sol role" '{"hook_event_name":"PreToolUse","tool_name":"spawn_agent","tool_input":{"agent_type":"sol_advisor_sol_reviewer","fork_turns":"none"}}'
+assert_spawn_denied "inherited context" '{"hook_event_name":"PreToolUse","tool_name":"spawn_agent","tool_input":{"agent_type":"sol_advisor_luna_subagent","fork_turns":"all"}}'
+assert_spawn_denied "model override" '{"hook_event_name":"PreToolUse","tool_name":"spawn_agent","tool_input":{"agent_type":"sol_advisor_luna_subagent","fork_turns":"none","model":"gpt-5.6-luna"}}'
+assert_spawn_denied "effort override" '{"hook_event_name":"PreToolUse","tool_name":"spawn_agent","tool_input":{"agent_type":"sol_advisor_luna_subagent","fork_turns":"none","reasoning_effort":"high"}}'
+assert_spawn_denied "malformed JSON" 'not-json'
+pass "plugin-wide spawn guard allows only the exact fresh Luna subagent contract"
 
 jq empty "$manifest"
 [ "$(jq -r '.version' "$manifest")" = 0.6.0 ] || fail "manifest version is not 0.6.0"
