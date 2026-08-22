@@ -1,0 +1,16 @@
+{
+  "name": "sol-advisor",
+  "description": "Advisor guidance and truthful host capability diagnostics.",
+  "owner": {"name": "atebites-hub", "url": "https://github.com/atebites-hub/sol-advisor"},
+  "plugins": [
+    {
+      "name": "sol-advisor",
+      "version": "0.9.0",
+      "description": "Experimental Grok Build detection; strict delegation disabled.",
+      "category": "developer-tools",
+      "source": {"type": "local", "path": "./plugins/sol-advisor"},
+      "keywords": ["advisor", "routing", "grok"]
+    }
+  ],
+  "version": 1
+}

@@ -1,0 +1,51 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "process",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hosts/zcode/hooks/enforce.sh",
+            "timeoutMs": 5000
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Agent|spawn_agent|spawn_subagent",
+        "hooks": [
+          {
+            "type": "process",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hosts/zcode/hooks/enforce.sh",
+            "timeoutMs": 5000
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Agent|spawn_agent|spawn_subagent",
+        "hooks": [
+          {
+            "type": "process",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hosts/zcode/hooks/enforce.sh",
+            "timeoutMs": 5000
+          }
+        ]
+      }
+    ],
+    "PostToolUseFailure": [
+      {
+        "matcher": "Agent|spawn_agent|spawn_subagent",
+        "hooks": [
+          {
+            "type": "process",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hosts/zcode/hooks/enforce.sh",
+            "timeoutMs": 5000
+          }
+        ]
+      }
+    ]
+  }
+}

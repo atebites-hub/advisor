@@ -1,5 +1,5 @@
 {
-  "description": "Automatically activate Sol Advisor and require every supported subagent spawn to use its fresh Luna / High profile.",
+  "description": "Activate Advisor, snapshot the root policy, and enforce the supported Codex primary/spawn path.",
   "hooks": {
     "SessionStart": [
       {
@@ -9,20 +9,33 @@
             "type": "command",
             "command": "sh \"${PLUGIN_ROOT}/hooks/session-context.sh\"",
             "timeout": 5,
-            "statusMessage": "Activating Sol Advisor"
+            "statusMessage": "Activating Advisor"
           }
         ]
       }
     ],
     "PreToolUse": [
       {
-        "matcher": "collaborationspawn_agent|spawn_agent|Agent",
+        "matcher": ".*",
         "hooks": [
           {
             "type": "command",
-            "command": "sh \"${PLUGIN_ROOT}/hooks/enforce-luna-subagent.sh\"",
+            "command": "sh \"${PLUGIN_ROOT}/hooks/enforce-codex.sh\"",
             "timeout": 5,
-            "statusMessage": "Enforcing Luna / High subagents"
+            "statusMessage": "Enforcing Advisor runtime policy"
+          }
+        ]
+      }
+    ],
+    "SubagentStart": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"${PLUGIN_ROOT}/hooks/session-context.sh\"",
+            "timeout": 5,
+            "statusMessage": "Applying Advisor grunt context"
           }
         ]
       }

@@ -1,0 +1,429 @@
+#!/bin/sh
+set -eu
+
+fail() { printf '%s\n' "ERROR: $*" >&2; exit 1; }
+need() { command -v "$1" >/dev/null 2>&1 || fail "required command is unavailable: $1"; }
+
+usage() {
+  printf '%s\n' \
+    'Usage:' \
+    '  advisor configure --host codex --advisor-model MODEL --advisor-effort EFFORT --grunt-model MODEL --grunt-effort EFFORT' \
+    '  advisor apply --host codex' \
+    '  advisor doctor --host codex|zcode|grok|cursor|claude [--json]' \
+    '  advisor remove --host codex'
+}
+
+script_dir=$(CDPATH= cd "$(dirname "$0")" && pwd) || exit 1
+plugin_dir=$(CDPATH= cd "$script_dir/.." && pwd) || exit 1
+installer=$plugin_dir/scripts/install-agents.sh
+
+if [ -n "${ADVISOR_CONFIG_HOME-}" ]; then
+  config_dir=$ADVISOR_CONFIG_HOME
+elif [ -n "${XDG_CONFIG_HOME-}" ]; then
+  config_dir=$XDG_CONFIG_HOME/advisor
+else
+  [ -n "${HOME-}" ] || fail "HOME is unset; set ADVISOR_CONFIG_HOME explicitly."
+  config_dir=$HOME/.config/advisor
+fi
+case "$config_dir" in /*) ;; *) config_dir=$(pwd -P)/$config_dir ;; esac
+case "$config_dir" in /|//) fail "refusing to use the filesystem root as Advisor configuration home." ;; esac
+profile=$config_dir/codex.json
+
+path_exists() { [ -e "$1" ] || [ -L "$1" ]; }
+file_mode() { stat -f %Lp "$1" 2>/dev/null || stat -c %a "$1" 2>/dev/null; }
+
+validate_config_dir() {
+  if path_exists "$config_dir" && { [ -L "$config_dir" ] || [ ! -d "$config_dir" ]; }; then
+    fail "Advisor configuration home is not a real directory: $config_dir"
+  fi
+}
+
+valid_model() {
+  printf '%s\n' "$1" | LC_ALL=C grep -Eq '^[A-Za-z0-9][A-Za-z0-9._:+/-]{0,255}$'
+}
+
+valid_effort() {
+  printf '%s\n' "$1" | LC_ALL=C grep -Eq '^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$'
+}
+
+profile_is_valid() {
+  candidate=$1
+  [ -f "$candidate" ] && [ ! -L "$candidate" ] && [ -r "$candidate" ] && [ "$(file_mode "$candidate")" = 600 ] || return 1
+  jq -e '
+    type == "object" and keys == ["advisor","grunt","host","schemaVersion"] and
+    .schemaVersion == 1 and .host == "codex" and
+    (.advisor | type == "object" and keys == ["effort","model"] and
+      (.model | type == "string" and length > 0) and (.effort | type == "string" and length > 0)) and
+    (.grunt | type == "object" and keys == ["effort","model"] and
+      (.model | type == "string" and length > 0) and (.effort | type == "string" and length > 0))
+  ' "$candidate" >/dev/null 2>&1 || return 1
+  profile_advisor_model=$(jq -r '.advisor.model' "$candidate")
+  profile_advisor_effort=$(jq -r '.advisor.effort' "$candidate")
+  profile_grunt_model=$(jq -r '.grunt.model' "$candidate")
+  profile_grunt_effort=$(jq -r '.grunt.effort' "$candidate")
+  valid_model "$profile_advisor_model" && valid_effort "$profile_advisor_effort" &&
+    valid_model "$profile_grunt_model" && valid_effort "$profile_grunt_effort"
+}
+
+catalog_path() {
+  if [ -n "${ADVISOR_MODEL_CATALOG-}" ]; then
+    printf '%s\n' "$ADVISOR_MODEL_CATALOG"
+  elif [ -n "${CODEX_HOME-}" ]; then
+    printf '%s\n' "$CODEX_HOME/models_cache.json"
+  elif [ -n "${HOME-}" ]; then
+    printf '%s\n' "$HOME/.codex/models_cache.json"
+  else
+    printf '%s\n' ''
+  fi
+}
+
+catalog_is_available() {
+  candidate=$1
+  [ -n "$candidate" ] && [ -f "$candidate" ] && [ ! -L "$candidate" ] && [ -r "$candidate" ] &&
+    jq -e '.models | type == "array"' "$candidate" >/dev/null 2>&1
+}
+
+catalog_has_tuple() {
+  candidate=$1 model=$2 effort=$3
+  jq -e --arg model "$model" --arg effort "$effort" '
+    any(.models[]?; .slug == $model and any(.supported_reasoning_levels[]?; .effort == $effort))
+  ' "$candidate" >/dev/null 2>&1
+}
+
+parse_host_only() {
+  parsed_host= parsed_json=0
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --host)
+        [ "$#" -ge 2 ] || fail "--host requires a value."
+        case "$2" in --*) fail "--host requires an explicit value." ;; esac
+        [ -z "$parsed_host" ] || fail "--host was supplied more than once."
+        parsed_host=$2
+        shift 2
+        ;;
+      --json)
+        [ "$parsed_json" -eq 0 ] || fail "--json was supplied more than once."
+        parsed_json=1
+        shift
+        ;;
+      *) fail "unknown or positional argument: $1" ;;
+    esac
+  done
+  [ -n "$parsed_host" ] || fail "--host is required."
+}
+
+configure() {
+  host= advisor_model= advisor_effort= grunt_model= grunt_effort=
+  seen_advisor_model=0 seen_advisor_effort=0 seen_grunt_model=0 seen_grunt_effort=0
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --host)
+        [ "$#" -ge 2 ] || fail "--host requires a value."
+        [ -z "$host" ] || fail "--host was supplied more than once."
+        host=$2; shift 2 ;;
+      --advisor-model)
+        [ "$#" -ge 2 ] || fail "--advisor-model requires a value."
+        [ "$seen_advisor_model" -eq 0 ] || fail "--advisor-model was supplied more than once."
+        seen_advisor_model=1; advisor_model=$2; shift 2 ;;
+      --advisor-effort)
+        [ "$#" -ge 2 ] || fail "--advisor-effort requires a value."
+        [ "$seen_advisor_effort" -eq 0 ] || fail "--advisor-effort was supplied more than once."
+        seen_advisor_effort=1; advisor_effort=$2; shift 2 ;;
+      --grunt-model)
+        [ "$#" -ge 2 ] || fail "--grunt-model requires a value."
+        [ "$seen_grunt_model" -eq 0 ] || fail "--grunt-model was supplied more than once."
+        seen_grunt_model=1; grunt_model=$2; shift 2 ;;
+      --grunt-effort)
+        [ "$#" -ge 2 ] || fail "--grunt-effort requires a value."
+        [ "$seen_grunt_effort" -eq 0 ] || fail "--grunt-effort was supplied more than once."
+        seen_grunt_effort=1; grunt_effort=$2; shift 2 ;;
+      *) fail "unknown or positional argument: $1" ;;
+    esac
+  done
+  [ "$host" = codex ] || fail "configure currently supports only --host codex."
+  [ "$seen_advisor_model" -eq 1 ] && [ "$seen_advisor_effort" -eq 1 ] &&
+    [ "$seen_grunt_model" -eq 1 ] && [ "$seen_grunt_effort" -eq 1 ] ||
+    fail "configure requires both complete advisor and grunt tuples."
+  valid_model "$advisor_model" || fail "advisor model contains unsupported characters."
+  valid_effort "$advisor_effort" || fail "advisor effort contains unsupported characters."
+  valid_model "$grunt_model" || fail "grunt model contains unsupported characters."
+  valid_effort "$grunt_effort" || fail "grunt effort contains unsupported characters."
+
+  need jq
+  validate_config_dir
+  if path_exists "$profile" && ! profile_is_valid "$profile"; then
+    fail "existing Codex profile is unsafe or invalid and will not be replaced: $profile"
+  fi
+  catalog=$(catalog_path)
+  if path_exists "$catalog" && ! catalog_is_available "$catalog"; then
+    fail "model catalog exists but is unsafe or invalid: $catalog"
+  fi
+  if catalog_is_available "$catalog"; then
+    catalog_has_tuple "$catalog" "$advisor_model" "$advisor_effort" || fail "advisor tuple is not available in the local model catalog."
+    catalog_has_tuple "$catalog" "$grunt_model" "$grunt_effort" || fail "grunt tuple is not available in the local model catalog."
+  fi
+
+  mkdir -p "$config_dir" || fail "could not create Advisor configuration home: $config_dir"
+  validate_config_dir
+  staged=$(mktemp "$config_dir/.codex.json.XXXXXX") || fail "could not stage the Codex profile"
+  cleanup_staged() { [ -z "${staged-}" ] || rm -f "$staged"; }
+  trap cleanup_staged 0 HUP INT TERM
+  jq -n --arg advisor_model "$advisor_model" --arg advisor_effort "$advisor_effort" \
+    --arg grunt_model "$grunt_model" --arg grunt_effort "$grunt_effort" \
+    '{schemaVersion:1,host:"codex",advisor:{model:$advisor_model,effort:$advisor_effort},grunt:{model:$grunt_model,effort:$grunt_effort}}' > "$staged" ||
+    fail "could not render the Codex profile"
+  chmod 600 "$staged" || fail "could not secure the staged Codex profile"
+  mv -f "$staged" "$profile" || fail "could not atomically install the Codex profile"
+  staged=
+  trap - 0 HUP INT TERM
+  printf '%s\n' "WROTE: $profile"
+  printf '%s\n' 'Run `$advisor apply --host codex`, then start a new session.'
+}
+
+probe_host() {
+  check_cli_present=false check_cli_version= check_files_current=false
+  check_hooks_configured=false check_hook_trust_observable=false check_hooks_trusted=false
+  check_odw_version=0.3.0 check_odw_compatible=false
+  case "$1" in
+    codex) candidates=codex ;;
+    zcode) candidates=zcode ;;
+    cursor) candidates='cursor-agent cursor' ;;
+    claude) candidates=claude ;;
+    grok) candidates=grok ;;
+    *) candidates= ;;
+  esac
+  for candidate in $candidates; do
+    if command -v "$candidate" >/dev/null 2>&1; then
+      check_cli_present=true
+      check_cli_version=$("$candidate" --version 2>/dev/null | sed -n '1,2p' | tr '\n' ' ' | sed 's/[[:space:]]*$//')
+      break
+    fi
+  done
+  if [ "$1" = codex ]; then
+    [ -f "$plugin_dir/hooks/hooks.json" ] && [ -f "$plugin_dir/hooks/enforce-codex.sh" ] && [ -f "$plugin_dir/hooks/session-context.sh" ] && check_hooks_configured=true
+    if sh "$installer" --profile "$profile" --check --check-role grunt >/dev/null 2>&1; then check_files_current=true; fi
+    if [ "$check_cli_present" = true ] && plugin_list=$(codex plugin list --json 2>/dev/null); then
+      if printf '%s\n' "$plugin_list" | jq -e 'any(.installed[]?; .pluginId == "open-dynamic-workflows@open-dynamic-workflows" and .version == "0.3.0" and .enabled == true)' >/dev/null 2>&1; then
+        check_odw_compatible=true
+      fi
+    fi
+  elif [ "$1" = zcode ]; then
+    [ -f "$plugin_dir/.zcode-plugin/plugin.json" ] && [ -f "$plugin_dir/hosts/zcode/hooks/hooks.json" ] && [ -f "$plugin_dir/hosts/zcode/hooks/enforce.sh" ] && check_files_current=true
+  fi
+}
+
+doctor_result() {
+  host=$1 code=$2 strict=$3 profile_source=$4 profile_valid=$5
+  advisor_model=$6 advisor_effort=$7 advisor_observable=$8 advisor_available=$9
+  shift 9
+  grunt_model=$1 grunt_effort=$2 grunt_observable=$3 grunt_available=$4 native_lane=$5 odw_lane=$6
+  jq -n --arg host "$host" --arg code "$code" --arg profile_path "$profile" --arg profile_source "$profile_source" \
+    --arg advisor_model "$advisor_model" --arg advisor_effort "$advisor_effort" \
+    --arg grunt_model "$grunt_model" --arg grunt_effort "$grunt_effort" \
+    --arg native_lane "$native_lane" --arg odw_lane "$odw_lane" --arg cli_version "$check_cli_version" \
+    --arg odw_version "$check_odw_version" \
+    --argjson strict "$strict" --argjson profile_valid "$profile_valid" \
+    --argjson advisor_observable "$advisor_observable" --argjson advisor_available "$advisor_available" \
+    --argjson grunt_observable "$grunt_observable" --argjson grunt_available "$grunt_available" \
+    --argjson cli_present "$check_cli_present" --argjson files_current "$check_files_current" \
+    --argjson hooks_configured "$check_hooks_configured" --argjson hook_trust_observable "$check_hook_trust_observable" \
+    --argjson hooks_trusted "$check_hooks_trusted" --argjson odw_compatible "$check_odw_compatible" '
+    {schemaVersion:1,host:$host,strict:$strict,code:$code,profileSource:$profile_source,profilePath:$profile_path,
+     profileValid:$profile_valid,
+     advisor:{model:$advisor_model,effort:$advisor_effort,observable:$advisor_observable,available:$advisor_available},
+     grunt:{model:$grunt_model,effort:$grunt_effort,observable:$grunt_observable,available:$grunt_available},
+     checks:{hostCli:{present:$cli_present,version:$cli_version},generatedFiles:{current:$files_current},
+       hooks:{configured:$hooks_configured,trustObservable:$hook_trust_observable,trusted:$hooks_trusted},
+       odwPlugin:{requiredVersion:$odw_version,compatible:$odw_compatible},
+       runtimeAttestation:{required:true,observed:false}},
+     nativeLane:$native_lane,odwLane:$odw_lane}
+  '
+}
+
+doctor() {
+  parse_host_only "$@"
+  need jq
+  probe_host "$parsed_host"
+  case "$parsed_host" in
+    cursor|claude)
+      doctor_result "$parsed_host" runtime_effort_attestation_unavailable false none false '' '' false false '' '' false false disabled disabled
+      return 1 ;;
+    grok)
+      doctor_result grok hook_failure_is_fail_open false none false '' '' false false '' '' false false disabled disabled
+      return 1 ;;
+    zcode)
+      if [ -n "${ZCODE_CONFIG-}" ]; then zcode_config=$ZCODE_CONFIG
+      else [ -n "${HOME-}" ] || fail "HOME is unset; set ZCODE_CONFIG."; zcode_config=$HOME/.zcode/cli/config.json
+      fi
+      profile=$zcode_config
+      if [ ! -f "$zcode_config" ] || [ -L "$zcode_config" ] || [ ! -r "$zcode_config" ]; then
+        doctor_result zcode plugin_settings_required false plugin false '' '' true false '' '' true false disabled disabled
+        return 1
+      fi
+      zcode_settings=$(jq -ce '
+        if .plugins.enabled == true and .plugins.enabledPlugins["sol-advisor@sol-advisor"] == true and
+          (.plugins.options["sol-advisor@sol-advisor"] | type == "object" and keys == ["advisor_effort","advisor_model","grunt_effort","grunt_model"] and all(.[]; type == "string" and length > 0))
+        then .plugins.options["sol-advisor@sol-advisor"] else error("invalid settings") end
+      ' "$zcode_config" 2>/dev/null) || {
+        doctor_result zcode plugin_settings_required false plugin false '' '' true false '' '' true false disabled disabled
+        return 1
+      }
+      check_hooks_configured=true
+      profile_advisor_model=$(printf '%s\n' "$zcode_settings" | jq -r '.advisor_model')
+      profile_advisor_effort=$(printf '%s\n' "$zcode_settings" | jq -r '.advisor_effort')
+      profile_grunt_model=$(printf '%s\n' "$zcode_settings" | jq -r '.grunt_model')
+      profile_grunt_effort=$(printf '%s\n' "$zcode_settings" | jq -r '.grunt_effort')
+      if ! valid_model "$profile_advisor_model" || ! valid_effort "$profile_advisor_effort" ||
+        ! valid_model "$profile_grunt_model" || ! valid_effort "$profile_grunt_effort"; then
+        doctor_result zcode invalid_plugin_settings false plugin false '' '' true false '' '' true false disabled disabled
+        return 1
+      fi
+      doctor_result zcode runtime_attestation_required false plugin true \
+        "$profile_advisor_model" "$profile_advisor_effort" true false \
+        "$profile_grunt_model" "$profile_grunt_effort" true false pending pending
+      return 1 ;;
+    codex) ;;
+    *) fail "unknown or excluded host: $parsed_host" ;;
+  esac
+
+  validate_config_dir
+  if path_exists "$profile"; then
+    if ! profile_is_valid "$profile"; then
+      doctor_result codex invalid_profile false file false '' '' false false '' '' false false disabled disabled
+      return 1
+    fi
+    profile_source=file
+  else
+    profile_source=built_in_default
+    profile_advisor_model=gpt-5.6-sol
+    profile_advisor_effort=ultra
+    profile_grunt_model=gpt-5.6-luna
+    profile_grunt_effort=high
+  fi
+  catalog=$(catalog_path)
+  if ! catalog_is_available "$catalog"; then
+    doctor_result codex model_capability_unverified false "$profile_source" true \
+      "$profile_advisor_model" "$profile_advisor_effort" false false \
+      "$profile_grunt_model" "$profile_grunt_effort" false false blocked blocked
+    return 1
+  fi
+  advisor_available=false grunt_available=false
+  if catalog_has_tuple "$catalog" "$profile_advisor_model" "$profile_advisor_effort"; then advisor_available=true; fi
+  if catalog_has_tuple "$catalog" "$profile_grunt_model" "$profile_grunt_effort"; then grunt_available=true; fi
+  if [ "$advisor_available" != true ] || [ "$grunt_available" != true ]; then
+    doctor_result codex model_tuple_unavailable false "$profile_source" true \
+      "$profile_advisor_model" "$profile_advisor_effort" true "$advisor_available" \
+      "$profile_grunt_model" "$profile_grunt_effort" true "$grunt_available" blocked blocked
+    return 1
+  fi
+  doctor_result codex activation_required false "$profile_source" true \
+    "$profile_advisor_model" "$profile_advisor_effort" true true \
+    "$profile_grunt_model" "$profile_grunt_effort" true true pending pending
+  return 1
+}
+
+apply_profile() {
+  parse_host_only "$@"
+  [ "$parsed_json" -eq 0 ] || fail "apply does not accept --json."
+  [ "$parsed_host" = codex ] || fail "apply currently supports only --host codex."
+  need jq
+  validate_config_dir
+  if path_exists "$profile"; then profile_is_valid "$profile" || fail "Codex profile is unsafe or invalid: $profile"; fi
+  sh "$installer" --profile "$profile"
+  printf '%s\n' 'Start a new Codex session after reviewing and trusting the Advisor hooks.'
+}
+
+snapshot_is_valid() {
+  candidate=$1 expected_id=$2
+  [ -f "$candidate" ] && [ ! -L "$candidate" ] && [ -r "$candidate" ] && [ "$(file_mode "$candidate")" = 600 ] || return 1
+  jq -e --arg runtime_id "$expected_id" '
+    type == "object" and keys == ["createdAt","host","policy","policyFingerprint","runtimeId","schemaVersion"] and
+    .schemaVersion == 1 and .host == "codex" and .runtimeId == $runtime_id and
+    (.runtimeId | test("^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")) and
+    (.createdAt | type == "string" and length > 0) and
+    (.policyFingerprint | type == "string" and test("^[a-f0-9]{64}$")) and
+    (.policy | type == "object" and keys == ["advisorEffort","advisorModel","gruntEffort","gruntModel"] and
+      all(.[]; type == "string" and length > 0))
+  ' "$candidate" >/dev/null 2>&1 || return 1
+  canonical=$(jq -c '{advisorModel:.policy.advisorModel,advisorEffort:.policy.advisorEffort,gruntModel:.policy.gruntModel,gruntEffort:.policy.gruntEffort}' "$candidate") || return 1
+  snapshot_advisor_model=$(printf '%s\n' "$canonical" | jq -r '.advisorModel')
+  snapshot_advisor_effort=$(printf '%s\n' "$canonical" | jq -r '.advisorEffort')
+  snapshot_grunt_model=$(printf '%s\n' "$canonical" | jq -r '.gruntModel')
+  snapshot_grunt_effort=$(printf '%s\n' "$canonical" | jq -r '.gruntEffort')
+  valid_model "$snapshot_advisor_model" && valid_effort "$snapshot_advisor_effort" &&
+    valid_model "$snapshot_grunt_model" && valid_effort "$snapshot_grunt_effort" || return 1
+  [ "$(printf '%s' "$canonical" | shasum -a 256 | awk '{print $1}')" = "$(jq -r '.policyFingerprint' "$candidate")" ]
+}
+
+remove_codex() {
+  parse_host_only "$@"
+  [ "$parsed_json" -eq 0 ] || fail "remove does not accept --json."
+  [ "$parsed_host" = codex ] || fail "remove currently supports only --host codex."
+  need jq
+  validate_config_dir
+  if path_exists "$profile" && ! profile_is_valid "$profile"; then
+    fail "Codex profile is unsafe or invalid and will not be removed: $profile"
+  fi
+  if path_exists "$profile"; then
+    profile_is_valid "$profile" || fail "Codex profile became invalid during remove preflight."
+  else
+    profile_grunt_model=gpt-5.6-luna
+    profile_grunt_effort=high
+  fi
+  if [ -n "${ADVISOR_AGENT_DIR-}" ]; then agent_dir=$ADVISOR_AGENT_DIR
+  elif [ -n "${CODEX_HOME-}" ]; then agent_dir=$CODEX_HOME/agents
+  else [ -n "${HOME-}" ] || fail "HOME is unset; set ADVISOR_AGENT_DIR."; agent_dir=$HOME/.codex/agents
+  fi
+  case "$agent_dir" in /*) ;; *) agent_dir=$(pwd -P)/$agent_dir ;; esac
+  if path_exists "$agent_dir" && { [ -L "$agent_dir" ] || [ ! -d "$agent_dir" ]; }; then fail "Codex agent directory is unsafe: $agent_dir"; fi
+  role=$agent_dir/advisor-grunt.toml
+  template=$plugin_dir/templates/codex-advisor-grunt.toml.in
+  tmp_base=${TMPDIR:-/tmp}; case "$tmp_base" in /*) ;; *) tmp_base=/tmp ;; esac
+  tmp_base=$(CDPATH= cd "$tmp_base" && pwd -P)
+  expected_role=$(mktemp "$tmp_base/advisor-remove-role.XXXXXX") || fail "could not stage role comparison."
+  cleanup_expected_role() { [ -z "${expected_role-}" ] || rm -f "$expected_role"; }
+  trap cleanup_expected_role 0 HUP INT TERM
+  sed -e "s|@GRUNT_MODEL@|$profile_grunt_model|g" -e "s|@GRUNT_EFFORT@|$profile_grunt_effort|g" "$template" > "$expected_role" || fail "could not render role comparison."
+  if path_exists "$role"; then
+    [ -f "$role" ] && [ ! -L "$role" ] && [ "$(file_mode "$role")" = 600 ] && cmp -s "$expected_role" "$role" ||
+      fail "Codex role is modified or unsafe and will not be removed: $role"
+  fi
+  sessions_dir=$config_dir/sessions
+  if path_exists "$sessions_dir" && { [ -L "$sessions_dir" ] || [ ! -d "$sessions_dir" ]; }; then
+    fail "session snapshot path is unsafe: $sessions_dir"
+  fi
+  if [ -d "$sessions_dir" ]; then
+    for candidate in "$sessions_dir"/*; do
+      [ -e "$candidate" ] || [ -L "$candidate" ] || continue
+      name=$(basename "$candidate")
+      case "$name" in *.json) runtime_id=${name%.json} ;; *) fail "unowned file blocks Advisor session cleanup: $candidate" ;; esac
+      snapshot_is_valid "$candidate" "$runtime_id" || fail "invalid session snapshot will not be removed: $candidate"
+    done
+  fi
+  if path_exists "$role"; then
+    [ -f "$role" ] && [ ! -L "$role" ] && [ "$(file_mode "$role")" = 600 ] && cmp -s "$expected_role" "$role" || fail "Codex role changed during remove preflight."
+    rm "$role" || fail "could not remove Codex role: $role"
+  fi
+  if [ -d "$sessions_dir" ]; then
+    for candidate in "$sessions_dir"/*.json; do
+      [ -e "$candidate" ] || continue
+      rm "$candidate" || fail "could not remove session snapshot: $candidate"
+    done
+    rmdir "$sessions_dir" 2>/dev/null || true
+  fi
+  if path_exists "$profile"; then rm "$profile" || fail "could not remove Codex profile: $profile"; fi
+  rm -f "$expected_role"; expected_role=; trap - 0 HUP INT TERM
+  printf '%s\n' 'Advisor-owned Codex role, profile, and session snapshots are absent.'
+}
+
+[ "$#" -gt 0 ] || { usage; exit 1; }
+command_name=$1
+shift
+case "$command_name" in
+  configure) configure "$@" ;;
+  doctor) doctor "$@" ;;
+  apply) apply_profile "$@" ;;
+  remove) remove_codex "$@" ;;
+  --help|-h|help) usage ;;
+  *) fail "unknown command: $command_name" ;;
+esac

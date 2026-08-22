@@ -1,0 +1,13 @@
+{
+  "name": "sol-advisor",
+  "version": "0.9.0",
+  "description": "Advisor routing with strict ZCode runtime attestation.",
+  "skills": "./skills",
+  "hooks": "./hosts/zcode/hooks/hooks.json",
+  "userConfig": {
+    "advisor_model": {"type": "string", "title": "Advisor model", "required": true, "sensitive": false},
+    "advisor_effort": {"type": "string", "title": "Advisor effort", "required": true, "sensitive": false},
+    "grunt_model": {"type": "string", "title": "Grunt model", "required": true, "sensitive": false},
+    "grunt_effort": {"type": "string", "title": "Grunt effort", "required": true, "sensitive": false}
+  }
+}
