@@ -8,7 +8,7 @@
       "version": "0.9.0",
       "description": "Experimental Grok Build detection; strict delegation disabled.",
       "category": "developer-tools",
-      "source": {"type": "local", "path": "./plugins/sol-advisor"},
+      "source": {"type": "local", "path": "."},
       "keywords": ["advisor", "routing", "grok"]
     }
   ],

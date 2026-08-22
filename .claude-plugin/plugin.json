@@ -6,5 +6,6 @@
   "homepage": "https://github.com/atebites-hub/sol-advisor",
   "repository": "https://github.com/atebites-hub/sol-advisor",
   "license": "MIT",
-  "keywords": ["advisor", "routing", "claude-code", "diagnostics"]
+  "keywords": ["advisor", "routing", "claude-code", "diagnostics"],
+  "skills": "./plugins/sol-advisor/skills"
 }

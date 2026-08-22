@@ -3,8 +3,8 @@ set -eu
 
 fail() { printf '%s\n' "ZCODE_STRICT_ADVISOR_HOOK_FAILURE: $*" >&2; exit 2; }
 command -v jq >/dev/null 2>&1 || fail "jq is unavailable"
-plugin_root=${CLAUDE_PLUGIN_ROOT-${PLUGIN_ROOT-}}
-case "$plugin_root" in /*) ;; *) fail "plugin root is unavailable" ;; esac
+script_dir=$(CDPATH= cd "$(dirname "$0")" && pwd) || fail "hook directory is unavailable"
+plugin_root=$(CDPATH= cd "$script_dir/../../.." && pwd) || fail "Advisor package root is unavailable"
 payload=$(jq -ce 'if type == "object" then . else error("invalid") end' 2>/dev/null) || fail "malformed hook payload"
 tool=$(printf '%s\n' "$payload" | jq -r '.toolName // .tool_name // empty')
 if [ "${ZCODE_ODW_PROTOCOL-}" = 1 ]; then
