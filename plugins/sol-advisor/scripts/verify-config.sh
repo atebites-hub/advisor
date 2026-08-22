@@ -29,7 +29,7 @@ jq -n '{models:[
 ]}' > "$catalog"
 
 run_advisor() {
-  ADVISOR_CONFIG_HOME=$config_home ADVISOR_MODEL_CATALOG=$catalog sh "$advisor" "$@"
+  ADVISOR_CONFIG_HOME=$config_home ADVISOR_MODEL_CATALOG=$catalog ADVISOR_AGENT_DIR=$tmp_dir/agents sh "$advisor" "$@"
 }
 
 profile=$config_home/codex.json

@@ -102,7 +102,7 @@ find . -name '*.json' -not -path './.git/*' -exec jq empty {} \;
 git diff --check
 ```
 
-Release 0.9.1 only after source checks pass from fresh
+Release 0.9.2 only after source checks pass from fresh
 `origin/main`, and clean-profile positive and intentional-denial probes pass for Codex,
 ZCode, and ODW. Publish releases only after candidate acceptance, then repeat install,
 positive route, denial, inspection, and removal from the released artifacts. Cursor,
