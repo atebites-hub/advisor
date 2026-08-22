@@ -1,5 +1,5 @@
 {
-  "description": "Activate Advisor, snapshot the root policy, and enforce the supported Codex primary/spawn path.",
+  "description": "Activate Advisor, snapshot the root policy, and enforce supported Codex delegation entrypoints.",
   "hooks": {
     "SessionStart": [
       {
@@ -16,7 +16,7 @@
     ],
     "PreToolUse": [
       {
-        "matcher": ".*",
+        "matcher": "collaborationspawn_agent|spawn_agent|Agent|mcp__open_dynamic_workflows__workflow|mcp__open-dynamic-workflows__workflow",
         "hooks": [
           {
             "type": "command",

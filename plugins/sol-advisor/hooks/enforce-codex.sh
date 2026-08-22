@@ -13,9 +13,13 @@ plugin_root=${PLUGIN_ROOT-}
 case "$plugin_root" in /*) ;; *) deny "Advisor plugin root is unavailable." ;; esac
 payload=$(jq -ce 'if type == "object" then . else error("invalid") end' 2>/dev/null) || deny "Advisor received malformed PreToolUse input."
 printf '%s\n' "$payload" | jq -e '.hook_event_name == "PreToolUse"' >/dev/null 2>&1 || deny "Advisor received the wrong hook event."
+tool=$(printf '%s\n' "$payload" | jq -r '.tool_name // empty')
+case "$tool" in
+  collaborationspawn_agent|spawn_agent|Agent|mcp__open_dynamic_workflows__workflow|mcp__open-dynamic-workflows__workflow) ;;
+  *) exit 0 ;;
+esac
 runtime_id=$(printf '%s\n' "$payload" | jq -r '.session_id // empty')
 printf '%s\n' "$runtime_id" | LC_ALL=C grep -Eq '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' || deny "Advisor could not identify the primary Codex session."
-tool=$(printf '%s\n' "$payload" | jq -r '.tool_name // empty')
 
 if [ "${ODW_HOST-}" = codex ] && [ "${ODW_REQUIRE_CWD-}" = 1 ]; then
   case "$tool" in

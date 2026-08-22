@@ -78,7 +78,7 @@ pass "all repository JSON parses"
 
 codex_manifest=$plugin_dir/.codex-plugin/plugin.json
 jq -e '
-  .name == "sol-advisor" and .version == "0.9.0" and
+  .name == "sol-advisor" and .version == "0.9.1" and
   .interface.displayName == "Advisor" and
   (.description | test("advisor/grunt"; "i")) and
   (.interface.longDescription | test("Open Dynamic Workflows 0.3.0"))
@@ -90,19 +90,19 @@ for manifest in \
   "$repo_dir/.grok-plugin/plugin.json"
 do
   jq -e '
-    .name == "sol-advisor" and .version == "0.9.0" and
+    .name == "sol-advisor" and .version == "0.9.1" and
     .skills == "./plugins/sol-advisor/skills" and
     (.description | test("experimental detection; strict delegation disabled"; "i")) and
     (has("agents") | not) and (has("hooks") | not) and (has("mcpServers") | not)
   ' "$manifest" >/dev/null || fail "experimental manifest overclaims or has wrong version: $manifest"
 done
 jq -e '
-  .name == "sol-advisor" and .version == "0.9.0" and
+  .name == "sol-advisor" and .version == "0.9.1" and
   .hooks == "./plugins/sol-advisor/hosts/zcode/hooks/hooks.json" and .skills == "./plugins/sol-advisor/skills" and
   (.userConfig | keys == ["advisor_effort","advisor_model","grunt_effort","grunt_model"]) and
   all(.userConfig[]; .type == "string" and .required == true and .sensitive == false)
 ' "$repo_dir/.zcode-plugin/plugin.json" >/dev/null || fail "ZCode manifest contract is invalid"
-pass "all host manifests use Advisor 0.9.0 and truthful support labels"
+pass "all host manifests use Advisor 0.9.1 and truthful support labels"
 
 catalogs="
 $repo_dir/.agents/plugins/marketplace.json
@@ -111,7 +111,7 @@ $repo_dir/.claude-plugin/marketplace.json
 $repo_dir/.grok-plugin/marketplace.json
 $repo_dir/marketplace.json"
 printf '%s\n' "$catalogs" | sed '/^$/d' | while IFS= read -r catalog; do
-  jq -e '(.plugins | length) == 1 and .plugins[0].name == "sol-advisor" and .plugins[0].version == "0.9.0"' "$catalog" >/dev/null ||
+  jq -e '(.plugins | length) == 1 and .plugins[0].name == "sol-advisor" and .plugins[0].version == "0.9.1"' "$catalog" >/dev/null ||
     fail "catalog identity/version is invalid: $catalog"
   source_path=$(jq -r '.plugins[0].source | if type == "object" then .path else . end' "$catalog")
   case "$source_path" in .|./*|plugins/*) ;; *) fail "catalog source is not repository-relative: $catalog" ;; esac
@@ -127,7 +127,7 @@ pass "catalog sources resolve inside the repository"
 jq -e '
   (.hooks.SessionStart | length) == 1 and .hooks.SessionStart[0].matcher == "startup|resume|clear|compact" and
   .hooks.SessionStart[0].hooks[0].command == "sh \"${PLUGIN_ROOT}/hooks/session-context.sh\"" and
-  (.hooks.PreToolUse | length) == 1 and .hooks.PreToolUse[0].matcher == ".*" and
+  (.hooks.PreToolUse | length) == 1 and .hooks.PreToolUse[0].matcher == "collaborationspawn_agent|spawn_agent|Agent|mcp__open_dynamic_workflows__workflow|mcp__open-dynamic-workflows__workflow" and
   .hooks.PreToolUse[0].hooks[0].command == "sh \"${PLUGIN_ROOT}/hooks/enforce-codex.sh\"" and
   (.hooks.SubagentStart | length) == 1 and .hooks.SubagentStart[0].matcher == ".*"
 ' "$plugin_dir/hooks/hooks.json" >/dev/null || fail "Codex lifecycle hook wiring is invalid"
@@ -173,4 +173,4 @@ sh "$script_dir/verify-codex-adapter.sh"
 sh "$script_dir/verify-host-adapters.sh"
 sh "$script_dir/verify-odw-inspector.sh"
 
-printf '%s\n' "VERIFY PASSED: Advisor 0.9.0 source, host, runtime, migration, and ODW checks"
+printf '%s\n' "VERIFY PASSED: Advisor 0.9.1 source, host, runtime, migration, and ODW checks"

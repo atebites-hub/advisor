@@ -193,11 +193,14 @@ must_fail "missing inspector mode" sh "$inspector" --sessions-dir "$sessions" --
 pass "native advisor/grunt and standalone ODW runtime inspection"
 
 allowed='{"hook_event_name":"PreToolUse","session_id":"11111111-1111-4111-8111-111111111111","tool_name":"exec_command","tool_input":{}}'
+spawn='{"hook_event_name":"PreToolUse","session_id":"11111111-1111-4111-8111-111111111111","tool_name":"spawn_agent","tool_input":{"agent_type":"advisor_grunt","fork_turns":"none"}}'
 allowed_output=$(printf '%s\n' "$allowed" | PLUGIN_ROOT=$plugin_dir ADVISOR_CONFIG_HOME=$config CODEX_HOME=$tmp/codex sh "$enforcer")
 [ -z "$allowed_output" ] || fail "valid primary tool was not silently allowed"
-linked_output=$(printf '%s\n' "$allowed" | PLUGIN_ROOT=$plugin_dir ADVISOR_CONFIG_HOME=$tmp/config-link CODEX_HOME=$tmp/codex sh "$enforcer")
-printf '%s\n' "$linked_output" | jq -e '.hookSpecificOutput.permissionDecision == "deny"' >/dev/null || fail "symlinked Advisor config home bypassed primary enforcement"
-spawn='{"hook_event_name":"PreToolUse","session_id":"11111111-1111-4111-8111-111111111111","tool_name":"spawn_agent","tool_input":{"agent_type":"advisor_grunt","fork_turns":"none"}}'
+unverified_output=$(printf '%s\n' '{"hook_event_name":"PreToolUse","tool_name":"exec_command","tool_input":{}}' |
+  PLUGIN_ROOT=$plugin_dir ADVISOR_CONFIG_HOME=$tmp/missing-config CODEX_HOME=$tmp/missing-codex sh "$enforcer")
+[ -z "$unverified_output" ] || fail "ordinary solo tool required unavailable Advisor runtime state"
+linked_output=$(printf '%s\n' "$spawn" | PLUGIN_ROOT=$plugin_dir ADVISOR_CONFIG_HOME=$tmp/config-link CODEX_HOME=$tmp/codex sh "$enforcer")
+printf '%s\n' "$linked_output" | jq -e '.hookSpecificOutput.permissionDecision == "deny"' >/dev/null || fail "symlinked Advisor config home bypassed delegation enforcement"
 spawn_output=$(printf '%s\n' "$spawn" | PLUGIN_ROOT=$plugin_dir ADVISOR_CONFIG_HOME=$config CODEX_HOME=$tmp/codex sh "$enforcer")
 [ -z "$spawn_output" ] || fail "valid grunt spawn was denied"
 odw_allowed=$(printf '%s\n' "{\"hook_event_name\":\"PreToolUse\",\"session_id\":\"$odw_root\",\"tool_name\":\"exec_command\",\"tool_input\":{}}" |
@@ -206,7 +209,7 @@ odw_allowed=$(printf '%s\n' "{\"hook_event_name\":\"PreToolUse\",\"session_id\":
 odw_denied=$(printf '%s\n' "{\"hook_event_name\":\"PreToolUse\",\"session_id\":\"$odw_root\",\"tool_name\":\"spawn_agent\",\"tool_input\":{}}" |
   ODW_HOST=codex ODW_REQUIRE_CWD=1 PLUGIN_ROOT=$plugin_dir ADVISOR_CONFIG_HOME=$config CODEX_HOME=$tmp/codex sh "$enforcer")
 printf '%s\n' "$odw_denied" | jq -e '.hookSpecificOutput.permissionDecision == "deny"' >/dev/null || fail "marked Codex ODW worker could spawn a nested native child"
-incomplete_odw=$(printf '%s\n' "{\"hook_event_name\":\"PreToolUse\",\"session_id\":\"$odw_root\",\"tool_name\":\"exec_command\",\"tool_input\":{}}" |
+incomplete_odw=$(printf '%s\n' "{\"hook_event_name\":\"PreToolUse\",\"session_id\":\"$odw_root\",\"tool_name\":\"spawn_agent\",\"tool_input\":{}}" |
   ODW_HOST=codex PLUGIN_ROOT=$plugin_dir ADVISOR_CONFIG_HOME=$config CODEX_HOME=$tmp/codex sh "$enforcer")
 printf '%s\n' "$incomplete_odw" | jq -e '.hookSpecificOutput.permissionDecision == "deny"' >/dev/null || fail "incomplete ODW marker bypassed native enforcement"
 for denied in \
@@ -217,9 +220,11 @@ do
   decision=$(printf '%s\n' "$denied" | PLUGIN_ROOT=$plugin_dir ADVISOR_CONFIG_HOME=$config CODEX_HOME=$tmp/codex sh "$enforcer")
   printf '%s\n' "$decision" | jq -e '.hookSpecificOutput.permissionDecision == "deny"' >/dev/null || fail "prohibited spawn was not denied"
 done
-write_rollout "$root_a" null null gpt-5.6-sol high running
+write_rollout "$root_a" null null gpt-5.6-luna high running
 decision=$(printf '%s\n' "$allowed" | PLUGIN_ROOT=$plugin_dir ADVISOR_CONFIG_HOME=$config CODEX_HOME=$tmp/codex sh "$enforcer")
-printf '%s\n' "$decision" | jq -e '.hookSpecificOutput.permissionDecision == "deny"' >/dev/null || fail "wrong primary effort was not denied"
-pass "primary every-tool enforcement and exact grunt spawn guard"
+[ -z "$decision" ] || fail "wrong primary tuple blocked an ordinary solo tool"
+decision=$(printf '%s\n' "$spawn" | PLUGIN_ROOT=$plugin_dir ADVISOR_CONFIG_HOME=$config CODEX_HOME=$tmp/codex sh "$enforcer")
+printf '%s\n' "$decision" | jq -e '.hookSpecificOutput.permissionDecision == "deny"' >/dev/null || fail "wrong primary tuple did not block delegation"
+pass "ordinary solo continuity and strict grunt spawn guard"
 
 printf '%s\n' "VERIFY CODEX ADAPTER PASSED"
