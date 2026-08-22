@@ -17,9 +17,11 @@ delegation, [references/odw.md](references/odw.md) before Open Dynamic Workflows
 ## Confirm the session policy
 
 The active host must prove the primary runtime matches the advisor tuple captured for
-this session. Configuration, prompt text, or a model's self-report is not proof. Stop
-before task tools if the host is unsupported, hooks are inactive, evidence is missing,
-or the observed tuple conflicts with the immutable session policy.
+this session before native or ODW delegation. Configuration, prompt text, or a model's
+self-report is not proof. If the host is unsupported, hooks are inactive, evidence is
+missing, or the observed tuple conflicts with the immutable session policy, stay solo,
+state that strict Advisor delegation is inactive, and do not delegate. Ordinary solo
+task tools remain available.
 
 ## Declare the route before task tools
 

@@ -49,9 +49,11 @@ $advisor doctor --host codex
 ```
 
 Start a fresh task and vibe code normally. Advisor activates at session start, verifies
-the primary runtime before every supported tool call, delegates a bounded packet only
-when useful, and performs the final review in the primary task. Plugin installation does
-not add an `advisor` executable to your shell `PATH`; `$advisor` runs the packaged helper.
+the primary runtime before native or ODW delegation, delegates a bounded packet only
+when useful, and performs the final review in the primary task. A mismatched primary
+stays usable for ordinary solo tools but cannot delegate under Advisor. Plugin
+installation does not add an `advisor` executable to your shell `PATH`; `$advisor` runs
+the packaged helper.
 
 Before uninstalling, invoke `$advisor remove --host codex`. It removes only the exact
 generated role, valid profile, and validated Advisor session snapshots.

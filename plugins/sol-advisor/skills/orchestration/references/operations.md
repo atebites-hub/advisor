@@ -22,11 +22,13 @@ Configuration intent is never runtime proof.
 SHA-256 fingerprint to a private per-runtime file. Only a brand-new root reads the
 current profile; resume, clear, and compaction retain the existing snapshot.
 
-`PreToolUse` verifies the primary rollout against that immutable snapshot before every
-supported tool call. Spawn tools allow only `agent_type=advisor_grunt`,
-`fork_turns=none`, and no model/effort override. `SubagentStart` supplies bounded grunt
-context but cannot block. Post-result acceptance joins the child runtime ID to its
-rollout, exact role, parent, policy tuple, and completed lifecycle.
+`PreToolUse` leaves ordinary solo tools untouched. Before native or ODW delegation it
+verifies the primary rollout against that immutable snapshot. Spawn tools allow only
+`agent_type=advisor_grunt`, `fork_turns=none`, and no model/effort override. A primary
+tuple mismatch disables delegation without locking the task's ordinary tools.
+`SubagentStart` supplies bounded grunt context but cannot block. Post-result acceptance
+joins the child runtime ID to its rollout, exact role, parent, policy tuple, and
+completed lifecycle.
 
 After install or any hook change, review and trust all Advisor hooks in `/hooks` and
 start a fresh session. Disabled, untrusted, crashed, timed-out, malformed, or bypassed
@@ -100,7 +102,7 @@ find . -name '*.json' -not -path './.git/*' -exec jq empty {} \;
 git diff --check
 ```
 
-Release 0.9.0 only after dependency PRs are merged, source checks pass from fresh
+Release 0.9.1 only after source checks pass from fresh
 `origin/main`, and clean-profile positive and intentional-denial probes pass for Codex,
 ZCode, and ODW. Publish releases only after candidate acceptance, then repeat install,
 positive route, denial, inspection, and removal from the released artifacts. Cursor,
