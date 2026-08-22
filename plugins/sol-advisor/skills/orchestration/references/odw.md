@@ -1,102 +1,65 @@
-# Open Dynamic Workflows operations
+# Open Dynamic Workflows contract
 
-Use ODW only when a task needs more agents than one conversation can coordinate or the
-orchestration must be a rerunnable script. ODW is an execution mechanism within
-`delegate` or `audit`; it is not a fourth route. The Sol / Ultra primary task owns the
-workflow design, material judgment, independent verification, final review, and
-acceptance.
-
-ODW may exceed the native one-child default only because justified fanout is the reason
-to choose it. Select a finite task-specific node count and obey ODW's concurrency and
-total-agent limits.
+Use ODW only for scaled fanout or rerunnable orchestration. It remains inside
+`delegate` or `audit`; the advisor owns workflow design, judgment, verification, final
+review, and acceptance.
 
 ## Preflight
 
-Require enabled ODW v0.2.0 before authoring or running the workflow:
+Require the enabled `open-dynamic-workflows@open-dynamic-workflows` plugin at exactly
+version 0.3.0. Other versions are unverified. Do not edit ODW or its installed cache to
+satisfy this check.
 
-~~~sh
-codex plugin list --json | jq -e '
-  .installed[]
-  | select(.pluginId == "open-dynamic-workflows@open-dynamic-workflows")
-  | .version == "0.2.0" and .enabled == true
-'
-~~~
+Pass `cwd` as the exact active workspace. ODW writes required evidence under
+`.odw/<name>/runs/<runId>/`; a read-only project task does not prohibit these run
+artifacts.
 
-Any other version is unverified until its executor arguments and artifact format are
-revalidated. Do not edit ODW, its installed source, or its cache to satisfy this check.
+## Immutable route
 
-Call the workflow tool with `cwd` set to the exact active Codex workspace. Do not
-substitute a temporary directory or the plugin install/cache path: ODW validates this
-boundary and writes its run evidence under `.odw/<name>/runs/<runId>/` there. For an
-otherwise read-only task, read-only applies to project source, not these evidence artifacts.
-Remove only the exact accepted run directory after inspection when cleanup is in scope.
+Pass one raw three-field policy on the tool call:
 
-## Locked model node
-
-Every inline script defines this wrapper once:
-
-~~~js
-const lunaAgent = (prompt, options = {}) => agent(prompt, {
-  ...options,
-  executor: 'codex',
-  model: 'gpt-5.6-luna',
-  reasoningEffort: 'high',
+```js
+workflow({
+  cwd: '/absolute/active/workspace',
+  routingPolicy: {
+    executor: '<codex-or-zcode>',
+    model: '<configured-grunt-model>',
+    reasoningEffort: '<configured-grunt-effort>',
+  },
+  script,
 })
-~~~
+```
 
-Every model call uses `lunaAgent()`. The script contains no other raw `agent()` call.
-Review every resolved saved or nested script against the same rule before execution;
-nested agents share the parent run's evidence inventory. The fixed fields follow
-`...options`, so labels, phases, schemas, retries, `agentType`, and worktree isolation
-remain configurable while executor, model, and effort cannot be overridden. ZCode and
-mixed-executor workflows are invalid.
+Every model node omits `executor`, `model`, and `reasoningEffort` so ODW fills them from
+the immutable run policy. Explicit route fields must match exactly; mixed executors,
+raw alternate agents, resume/cache, Cursor, Claude Code, and Grok Build are invalid.
+Nested workflows inherit the same policy.
 
-Each worker prompt includes this exact boundary:
-
-~~~text
-OBJECTIVE
-State one observable bounded outcome and why it matters.
-
-FILES AND OWNERSHIP
-List the exact owned files or the exact read-only evidence scope.
-
-INTERFACES
-List the settled signatures, schemas, commands, and behavior.
-
-CONSTRAINTS
-- Preserve concurrent work and do not revert unrelated edits.
-- Do not redesign the settled architecture or widen scope.
-- Do not spawn subagents or nested workflows.
-- Do not render the final verdict or accept your own result.
-
-VERIFICATION
-- Run the exact task-specific command.
-- State the concrete output that proves success.
-
-RETURN
-Return changes, exact verification evidence, judgment calls, and gaps.
-~~~
-
-A Luna synthesis node may consolidate worker results, but its output is a draft for
-independent Sol / Ultra review.
+Each worker prompt uses the packet in `role-contracts.md`, including exact ownership,
+interfaces, constraints, verification, structured return, no subagents, and no final
+verdict. Compatible Codex workers receive bounded ODW startup context and cannot use
+native spawn or nested-workflow tools. Compatible ZCode workers accept only the
+runtime's standalone ODW attestation and cannot use native Agent. Those markers are
+context, not route proof. A synthesis node produces only a draft.
 
 ## Runtime acceptance
 
-Do not accept the tool result by itself. Resolve the installed plugin path, bind
-`run_dir` to the exact absolute run directory returned by ODW, and inspect it:
+Bind `run_dir` to the exact absolute directory returned by the tool and run:
 
-~~~sh
+```sh
 plugin_dir="$(codex plugin list --json | jq -r '.installed[] | select(.pluginId == "sol-advisor@sol-advisor") | .source.path')"
 test -n "$plugin_dir" && test "$plugin_dir" != null && test -f "$plugin_dir/scripts/inspect-odw-run.sh"
-sh "$plugin_dir/scripts/inspect-odw-run.sh" "$run_dir"
-~~~
+sh "$plugin_dir/scripts/inspect-odw-run.sh" --host codex "$run_dir"
+```
 
-The accepted output contains only `run_id`, `agent_count`, and per-node `agent_id`,
-`thread_id`, `model`, and `effort`. Every node must report `gpt-5.6-luna` and `high`.
-Missing, duplicate, conflicting, failed, skipped, symlinked, partial, ZCode, mixed,
-wrong-route, or cached evidence invalidates the entire run. The first release does not
-follow cached provenance; rerun every node live.
+Use `--host zcode` for a ZCode run. The inspector requires one canonical run policy and
+recomputed fingerprint, complete fresh lifecycle/journal accounting, one successful
+trace per node, unique runtime IDs, and authoritative host evidence matching the
+policy. Codex evidence must be a completed standalone root with no native role or
+parent. ZCode evidence must attest `route=odw`, `role=main`, and no parent or native
+policy fields.
 
-After inspection, the Sol / Ultra primary task independently checks the actual work,
-reruns relevant verification, corrects or rejects failures, and performs final review.
-The inspector proves routing only; it does not prove implementation quality.
+Missing, duplicate, cached, failed, skipped, timed-out, cancelled, partial, symlinked,
+wrong-host, wrong-route, or conflicting evidence invalidates the whole run. The
+fingerprint correlates records; it never proves model or effort by itself. After route
+acceptance, the advisor still inspects the work and reruns its real verification.

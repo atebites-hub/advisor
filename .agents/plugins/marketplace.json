@@ -1,11 +1,12 @@
 {
   "name": "sol-advisor",
   "interface": {
-    "displayName": "Sol Advisor"
+    "displayName": "Advisor"
   },
   "plugins": [
     {
       "name": "sol-advisor",
+      "version": "0.9.0",
       "source": {
         "source": "local",
         "path": "./plugins/sol-advisor"

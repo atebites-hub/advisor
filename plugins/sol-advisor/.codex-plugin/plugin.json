@@ -1,7 +1,7 @@
 {
   "name": "sol-advisor",
-  "version": "0.8.0",
-  "description": "Automatically activated Sol / Ultra orchestration with Luna / High native children and ODW workers.",
+  "version": "0.9.0",
+  "description": "Configurable advisor/grunt routing with strict Codex and ZCode runtime evidence.",
   "author": {"name": "Daniel McAteer", "url": "https://github.com/DannyMac180"},
   "homepage": "https://github.com/atebites-hub/sol-advisor#readme",
   "repository": "https://github.com/atebites-hub/sol-advisor",
@@ -9,16 +9,16 @@
   "keywords": ["codex", "orchestration", "multi-agent", "gpt-5.6"],
   "skills": "./skills/",
   "interface": {
-    "displayName": "Sol Advisor",
-    "shortDescription": "Keep judgment in Sol / Ultra; route native and ODW workers to Luna / High.",
-    "longDescription": "Sol Advisor automatically activates in every fresh task and keeps GPT-5.6 Sol / Ultra in the primary task for architecture, material judgment, verification, final review, and acceptance. Solo is the default; delegate uses an exact native GPT-5.6 Luna / High child or, when scale requires Open Dynamic Workflows v0.2.0, trace-verified Codex Luna / High workers; audit keeps the verdict in the primary task. A trusted hook denies supported child spawns outside the native Luna / High contract, and model-sensitive startup context bounds Luna workers. ODW remains unchanged, and post-run evidence must prove every workflow node.",
+    "displayName": "Advisor",
+    "shortDescription": "Keep judgment primary; prove every configured grunt route.",
+    "longDescription": "Advisor automatically activates in fresh Codex tasks, snapshots the configured advisor/grunt policy, verifies the primary runtime before supported tool calls, permits only the generated bounded grunt role, and requires post-result rollout evidence. Solo is the default; delegate uses one proven grunt when useful; audit keeps the verdict primary. Open Dynamic Workflows 0.3.0 is optional for scaled or rerunnable Codex and ZCode work and requires one immutable route plus authoritative host evidence. Cursor, Claude Code, and Grok Build are packaged as experimental diagnostics with strict delegation disabled.",
     "developerName": "Daniel McAteer",
     "category": "Productivity",
     "capabilities": ["Interactive", "Write", "Lifecycle hooks"],
     "websiteURL": "https://github.com/atebites-hub/sol-advisor",
     "defaultPrompt": [
-      "Build and verify this feature with automatic Sol Advisor routing.",
-      "Keep judgment and final review in Sol / Ultra; use only Luna / High for native and ODW worker execution."
+      "Build and verify this feature with automatic Advisor routing.",
+      "Keep judgment and final review in the configured advisor; use only runtime-proven grunt execution."
     ]
   }
 }

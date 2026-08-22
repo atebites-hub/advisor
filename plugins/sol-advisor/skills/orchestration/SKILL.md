@@ -1,102 +1,79 @@
 ---
 name: orchestration
-description: "Codex-native routing with a Sol / Ultra primary task, Luna / High children, and primary-task review."
+description: "Automatic advisor/grunt routing with immutable host policy, runtime evidence, and primary-task review."
 ---
 
-# Sol Advisor Orchestration
+# Advisor orchestration
 
-Act as the architect and final reviewer. Own the user's intent, architecture, route,
-decomposition, material judgment, parent verification, review, and acceptance. Routes
-are exactly `solo`, `delegate`, and `audit`. Solo is the default.
-One child is the default maximum; use more only for explicitly independent parallel work.
+Act as the advisor and final reviewer. Own the user's intent, architecture, route,
+decomposition, material judgment, verification, corrections, review, and acceptance.
+Routes are exactly `solo`, `delegate`, and `audit`; `solo` is the default. One native
+grunt is the default maximum unless the work contains explicitly independent slices.
 
 Read [references/role-contracts.md](references/role-contracts.md) before native
-delegation. Read [references/odw.md](references/odw.md) before using Open Dynamic
-Workflows. Use [references/operations.md](references/operations.md) for hook trust,
-preflight, runtime evidence, migration, and release procedures.
+delegation, [references/odw.md](references/odw.md) before Open Dynamic Workflows, and
+[references/operations.md](references/operations.md) for host preflight and evidence.
 
-## Confirm the primary task
+## Confirm the session policy
 
-Run the primary Codex task on gpt-5.6-sol with ultra reasoning. Verify model and effort
-when runtime metadata exposes them. If either differs, stop before task tools and ask
-the user to select Sol / Ultra. If effort is not observable, ask the user to confirm it
-and stop until confirmed. A skill cannot change the primary model or effort.
+The active host must prove the primary runtime matches the advisor tuple captured for
+this session. Configuration, prompt text, or a model's self-report is not proof. Stop
+before task tools if the host is unsupported, hooks are inactive, evidence is missing,
+or the observed tuple conflicts with the immutable session policy.
 
 ## Declare the route before task tools
 
-Emit exactly one declaration before the first task tool call:
+Emit exactly once:
 
-~~~text
+```text
 SELECTIVE ROUTE
 mode: solo | delegate | audit
 risk: concise task-specific rationale
-~~~
+```
 
-No task tool call may precede this declaration. Choose `solo` unless delegation or a
-review-only task has a concrete benefit. Change the route only when new evidence
-justifies it; record that evidence and never silently downgrade.
-
-## Use only the Luna / High child
-
-For any delegation, verify the installed role with `install-agents.sh --check
---check-role luna`. Treat an untrusted or disabled plugin hook as inactive enforcement
-and stop before delegation. Spawn exactly:
-
-~~~text
-agent_type: sol_advisor_luna_subagent
-fork_turns: none
-~~~
-
-Do not attach model or reasoning overrides. Public spawn metadata is authoritative for
-role, model, and effort. Use the local runtime inspector only for omitted fields. The
-accepted tuple is `sol_advisor_luna_subagent`, `gpt-5.6-luna`, and `high`; missing or
-conflicting evidence invalidates the child result.
+No task tool call may precede the declaration. Use `delegate` only when a bounded
+packet benefits from separate execution; use `audit` when the requested outcome is a
+review. Record any evidence that justifies changing the route.
 
 ## Route delivery
 
-- `solo`: implement, test, verify, and self-review in the primary task; spawn no child.
-- `delegate`: give one Luna / High child a complete bounded packet; then inspect its
-  complete output, rerun verification, review, and accept or reject it in the primary
-  task.
-- `audit`: review the target directly in the primary task. A Luna / High child may
-  gather bounded evidence but cannot render the verdict.
+- `solo`: the advisor implements, tests, verifies, and self-reviews.
+- `delegate`: one configured grunt executes a bounded packet; the advisor inspects the
+  real result, reruns verification, corrects it, and performs final review.
+- `audit`: the advisor renders the verdict. A grunt may gather bounded evidence but
+  cannot decide the verdict.
 
-Keep judgment-heavy, high-risk, architectural, ambiguous, or wide-blast-radius work in
-the Sol / Ultra primary task. Child work substitutes for primary-task work; do not
-duplicate it.
+Keep architectural, ambiguous, high-risk, judgment-heavy, or wide-blast-radius work in
+the advisor. Delegated work substitutes for primary work; do not duplicate it.
 
-## Use ODW only for scaled or rerunnable work
+## Native delegation
 
-Open Dynamic Workflows is an execution mechanism within `delegate` or `audit`, never a
-fourth route. Use ODW when scale requires it or when the user explicitly asks for a repeatable/rerunnable multi-part workflow or audit; repeatability alone is sufficient even when immediate fanout is small. Confirm
-enabled ODW v0.2.0, author every model node through the immutable Luna / High wrapper in
-`references/odw.md`, and prohibit ZCode or mixed executors.
+Use only the host's configured grunt route, without per-spawn model or effort
+overrides. On Codex, preflight the generated `advisor_grunt` role and spawn it with
+`fork_turns=none`. On ZCode, use the native Agent path; the runtime must inherit the
+parent's persisted `lite` tuple, and keep it foreground so the parent hook can attest
+completion. Do not delegate on Cursor, Claude Code, or Grok Build while their doctor
+status says strict delegation is disabled.
 
-When ODW is selected, pass the exact active workspace as `cwd`.
-ODW run evidence is an allowed side effect. For an otherwise read-only task, a request
-not to modify files applies to project source, not `.odw/<name>/runs/<runId>/` artifacts.
+Every packet contains OBJECTIVE, FILES AND OWNERSHIP, INTERFACES, CONSTRAINTS,
+VERIFICATION, RETURN, and IMPLEMENTATION REPORT. Treat the grunt's report as a claim:
+inspect the actual diff or artifact and authoritative runtime evidence yourself.
 
-Inspect the exact completed run before using any result. Missing, cached, failed, or
-conflicting trace and rollout evidence invalidates the whole run. A Luna synthesis is
-only a draft; the Sol / Ultra primary task performs final review and acceptance.
+## Open Dynamic Workflows
 
-## Specify and verify every child task
+ODW is an execution mechanism inside `delegate` or `audit`, never a fourth route. Use
+it only for scaled fanout or rerunnable orchestration. Pass the active workspace as
+`cwd` and one immutable run policy matching the configured grunt. Raw model nodes,
+mixed routes, resume/cache, or unsupported hosts are invalid.
 
-Every child packet contains OBJECTIVE, FILES AND OWNERSHIP, INTERFACES, CONSTRAINTS,
-VERIFICATION, and the structured return defined in the role contracts. State exact
-owned files, preserve concurrent edits, and do not widen scope.
+Inspect the exact completed run before using any result. Every model node needs a
+unique authoritative runtime ID, the exact policy tuple, a successful fresh lifecycle,
+and matching trace/host evidence. A synthesis node is still a draft for advisor review.
 
-Treat child reports as claims. Inspect the complete diff or artifact, verify changed
-scope, rerun requested checks, and confirm runtime evidence. The primary task performs
-final review after every correction; no reviewer child exists.
+## Platform boundary
 
-## State the platform boundary truthfully
-
-The trusted plugin hook blocks supported `spawn_agent` calls, including the `Agent`
-alias and code-mode calls. It is not an unbypassable platform policy: disabled,
-untrusted, failed, or specialized opt-out paths are outside the guard. Never claim
-enforcement without observed hook trust and runtime evidence.
-
-ODW launches independent `codex exec` subprocesses outside the native spawn hook. Its
-Sol Advisor boundary is locked authoring plus fail-closed post-run acceptance, not a
-pre-spawn platform policy or a modification to ODW.
+Codex and ZCode enforcement covers their supported native hook paths and post-result
+inspection; neither is an unbypassable policy when a plugin or hook is disabled,
+untrusted, failed, or bypassed. ODW launches independent CLI subprocesses, so its
+boundary is immutable prelaunch routing plus fail-closed post-run acceptance. Never
+claim strict enforcement without current host/runtime evidence.

@@ -1,126 +1,108 @@
-# Operations
+# Advisor operations
 
-This is the maintainer and operator reference for Sol Advisor's native custom-agent and
-Open Dynamic Workflows paths. Keep the README user-facing; use this page when
-installing, delegating, inspecting routing, or validating a release.
+This is the operator and maintainer reference. The package ID remains `sol-advisor`;
+all user-facing surfaces are Advisor.
 
-## Role pin and spawn contract
+## Host status
 
-| Role type | Model | Effort | Use |
+| Host | Native | ODW | Gate |
 |---|---|---|---|
-| sol_advisor_luna_subagent | gpt-5.6-luna | high | Bounded implementation, research, evidence, and testing |
+| Codex CLI / ChatGPT Codex app | supported | supported | trusted hooks plus rollout evidence |
+| maintained ZCode fork | supported | supported | runtime 0.16.3 attestation plus plugin hooks |
+| Cursor | disabled | disabled | resolved effort is not authoritative |
+| Claude Code | disabled | disabled | resolved effort is not authoritative |
+| Grok Build | disabled | disabled | hook-handler failures are fail-open |
+| Grok Bot | excluded | excluded | outside product scope |
 
-~~~text
-agent_type: sol_advisor_luna_subagent
-fork_turns: none
-~~~
+Configuration intent is never runtime proof.
 
-Do not attach model or reasoning overrides.
+## Codex lifecycle
 
-## Automatic activation, hook trust, and boundary
+`SessionStart` snapshots the complete configured advisor/grunt policy and fixed-key
+SHA-256 fingerprint to a private per-runtime file. Only a brand-new root reads the
+current profile; resume, clear, and compaction retain the existing snapshot.
 
-The plugin's synchronous `SessionStart` hook emits the canonical orchestration
-`SKILL.md` as developer context on `startup`, `resume`, `clear`, and `compact`. The
-separate synchronous `PreToolUse` hook denies supported child spawns that do not use
-the exact contract above.
+`PreToolUse` verifies the primary rollout against that immutable snapshot before every
+supported tool call. Spawn tools allow only `agent_type=advisor_grunt`,
+`fork_turns=none`, and no model/effort override. `SubagentStart` supplies bounded grunt
+context but cannot block. Post-result acceptance joins the child runtime ID to its
+rollout, exact role, parent, policy tuple, and completed lifecycle.
 
-Review and trust both lifecycle behaviors through `/hooks` after installation or every
-hook definition change, then start a fresh task. Disabled, untrusted, failed, and
-specialized opt-out paths are not covered; runtime evidence remains required. The
-hooks do not select or prove the primary task's reasoning effort.
+After install or any hook change, review and trust all Advisor hooks in `/hooks` and
+start a fresh session. Disabled, untrusted, crashed, timed-out, malformed, or bypassed
+hooks mean the lane is unsupported.
 
-## Installation and migration
+Codex workers launched by the compatible ODW plugin carry its `ODW_HOST=codex` and
+`ODW_REQUIRE_CWD=1` markers. They receive bounded-worker context, create no native root
+snapshot, and cannot use the native spawn or nested-workflow tools. Their route is
+accepted only from the completed ODW run evidence described below.
 
-At installation or update time, run:
+Install or verify the generated role:
 
-~~~sh
+```sh
 sh plugins/sol-advisor/scripts/install-agents.sh
-sh plugins/sol-advisor/scripts/install-agents.sh --check
-~~~
+sh plugins/sol-advisor/scripts/install-agents.sh --check --check-role grunt
+```
 
-The installer creates one Luna / High profile and removes only byte-exact historical
-Sol Advisor profiles. Any modified, unsafe, unreadable, or conflicting destination
-stops the whole preflight before mutation. Unrelated agent files remain untouched.
+The installer stages mode-600 output, refuses modified or unsafe destinations, and
+retires only byte-exact files from earlier releases.
 
-When operating from an installed skill, resolve the same script relative to this
-reference's parent skill:
+## ZCode lifecycle
 
-~~~sh
-skill_dir=<directory-containing-this-SKILL.md>
-installer="$skill_dir/../../scripts/install-agents.sh"
-sh "$installer" --check
-~~~
+The enabled plugin owns four required nonsensitive settings. A new root reads them once
+and persists an immutable `main`/`lite` policy plus fingerprint. Restored roots retain
+their saved policy; all foreground, background, and resumed children inherit the
+parent's `lite` route. Advisor does not copy values into host model settings or touch
+provider credentials.
 
-## Route preflight
+The maintained runtime emits one `zcode_runtime_attestation`. Native acceptance
+recomputes its four-field policy fingerprint and checks runtime version, `main|lite`
+role, parent, source, model, effort, and lifecycle. The strict native lane permits only
+foreground delegation because only its parent tool result carries joined terminal
+child evidence; background launch remains route-correct but is denied by Advisor.
+ZCode plugin hooks must block
+missing, crashing, timed-out, malformed, disabled, or conflicting enforcement paths.
+The ZCode ODW executor's `ZCODE_ODW_PROTOCOL=1` workers are accepted only with a
+runtime-owned standalone ODW attestation and cannot launch nested native agents; their
+exact tuple and completion remain subject to post-run ODW inspection.
 
-The primary task must be Sol / Ultra. `solo` needs no child. `delegate` and any `audit`
-evidence child require `install-agents.sh --check --check-role luna`. Cache a successful
-check only for the current task and invalidate it after installation or configuration
-changes.
+## Runtime inspectors
 
-## Accepted runtime evidence
+Use only the exact runtime/result IDs from the host:
 
-Public spawn details are authoritative. When they omit model or effort, run the
-repository-relative `../../scripts/inspect-agent-runtime.sh` for the exact child thread.
-Accept only `sol_advisor_luna_subagent`, `gpt-5.6-luna`, and `high`. Missing,
-conflicting, or different evidence invalidates the result; the inspector is not a
-model-selection fallback.
+```sh
+sh plugins/sol-advisor/scripts/inspect-codex-runtime.sh --mode native --policy SNAPSHOT --role advisor ROOT_ID
+sh plugins/sol-advisor/scripts/inspect-codex-runtime.sh --mode native --policy SNAPSHOT --role grunt --result RESULT CHILD_ID
+sh plugins/sol-advisor/scripts/inspect-zcode-runtime.sh --mode native --role advisor --config ZCODE_CONFIG < HOOK_PAYLOAD
+sh plugins/sol-advisor/scripts/inspect-zcode-runtime.sh --mode native --role grunt --config ZCODE_CONFIG < HOOK_PAYLOAD
+```
 
-When operating from an installed skill, resolve the helper relative to this reference's
-parent skill and inspect the exact native thread ID:
+Inspectors emit only allowlisted routing/lifecycle fields. They reject unsafe paths,
+ambiguous records, wrong roles/parents/tuples, policy drift, fallback evidence, and
+failed, timed-out, cancelled, or incomplete children.
 
-~~~sh
-skill_dir=<directory-containing-this-SKILL.md>
-runtime_inspector="$skill_dir/../../scripts/inspect-agent-runtime.sh"
-sh "$runtime_inspector" <native-subagent-thread-id>
-~~~
+See `odw.md` for the separate standalone ODW contract. Native grunt evidence is never
+accepted as ODW evidence, or vice versa.
 
-For a disposable fixture or non-default session root:
+## Configuration and removal
 
-~~~sh
-sh "$runtime_inspector" --sessions-dir /absolute/path/to/sessions <native-subagent-thread-id>
-~~~
+The installed `advisor` skill resolves `../../bin/advisor`; no executable is exported
+to `PATH`. `configure` and `apply` currently write only Codex-owned Advisor state.
+ZCode configuration remains in its plugin record. `doctor` is read-only and reports
+capability gates independently. `remove --host codex` is the explicit pre-uninstall
+cleanup and refuses any state it cannot prove Advisor owns.
 
-The helper searches one exact rollout filename suffix and emits only allowlisted
-routing fields. It refuses invalid IDs, zero/multiple matches, missing fields, or
-conflicting model/effort/sandbox/permission/working-directory values. It never prints
-prompts, messages, environment variables, tokens, configuration, or arbitrary rollout
-payloads.
+## Maintainer verification and release
 
-## Parent acceptance
-
-Every child receives the five-part packet from role-contracts.md. The Sol / Ultra
-primary task owns architecture, diff or artifact inspection, verification reruns,
-corrections, final review, and acceptance. A child never renders the final verdict.
-
-## ODW v0.2.0 evidence
-
-Before an ODW call, verify the installed plugin is enabled at exactly v0.2.0 and use the
-locked wrapper in `odw.md`. After the call, bind `run_dir` to the exact absolute run
-directory returned by ODW and run the installed inspector:
-
-~~~sh
-plugin_dir="$(codex plugin list --json | jq -r '.installed[] | select(.pluginId == "sol-advisor@sol-advisor") | .source.path')"
-test -n "$plugin_dir" && test "$plugin_dir" != null && test -f "$plugin_dir/scripts/inspect-odw-run.sh"
-sh "$plugin_dir/scripts/inspect-odw-run.sh" "$run_dir"
-~~~
-
-Accept only complete fresh runs where every trace and matching rollout proves Codex
-GPT-5.6 Luna / High. The inspector rejects caches and emits routing evidence only. The
-Sol / Ultra primary still inspects artifacts, reruns checks, and performs final review.
-
-## Maintainer verification
-
-From the repository root, run:
-
-~~~sh
+```sh
 sh plugins/sol-advisor/scripts/verify.sh
+find . -name '*.json' -not -path './.git/*' -exec jq empty {} \;
 git diff --check
-git status --short
-git diff --stat
-~~~
+```
 
-The v0.8.0 verifier covers model-sensitive `SessionStart` context, one native role,
-spawn-guard fixtures, native and ODW Luna / High runtime evidence, ODW failure and
-leakage refusals, three routes, JSON/TOML validity, shell syntax, installer migration
-safety, and absence of retired workflow references.
+Release 0.9.0 only after dependency PRs are merged, source checks pass from fresh
+`origin/main`, and clean-profile positive and intentional-denial probes pass for Codex,
+ZCode, and ODW. Publish releases only after candidate acceptance, then repeat install,
+positive route, denial, inspection, and removal from the released artifacts. Cursor,
+Claude Code, and Grok Build remain experimental until their named runtime gates are
+demonstrably closed.

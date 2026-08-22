@@ -1,0 +1,16 @@
+{
+  "name": "sol-advisor",
+  "description": "Advisor model routing for supported coding hosts.",
+  "owner": {"name": "atebites-hub", "url": "https://github.com/atebites-hub/sol-advisor"},
+  "plugins": [
+    {
+      "name": "sol-advisor",
+      "version": "0.9.0",
+      "source": "./plugins/sol-advisor",
+      "description": "Advisor routing with strict ZCode runtime attestation.",
+      "category": "developer-tools",
+      "keywords": ["advisor", "routing", "subagent", "zcode"]
+    }
+  ],
+  "version": 1
+}

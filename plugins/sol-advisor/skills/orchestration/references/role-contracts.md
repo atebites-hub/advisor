@@ -1,64 +1,65 @@
-# Native Codex child contract
+# Native advisor/grunt contract
 
-Use this contract only with Sol Advisor's role-pinned Luna / High child. It does
-not select the primary model or launch a nested CLI.
+Use this contract only after the current host proves its immutable advisor/grunt
+policy and strict native lane are active.
 
 ## Route and preflight
 
-Before task tools, declare `solo`, `delegate`, or `audit`. Confirm Sol / Ultra in the
-primary task. `solo` needs no companion check. Any route that spawns a child requires:
+Declare `solo`, `delegate`, or `audit` before task tools. `solo` needs no grunt.
+Codex delegation requires the installed generated role to pass:
 
-~~~sh
-sh plugins/sol-advisor/scripts/install-agents.sh --check --check-role luna
-~~~
+```sh
+sh plugins/sol-advisor/scripts/install-agents.sh --check --check-role grunt
+```
 
-The only valid spawn is:
+Its only valid spawn is:
 
-~~~text
-agent_type: sol_advisor_luna_subagent
+```text
+agent_type: advisor_grunt
 fork_turns: none
-~~~
+```
 
-Omit per-spawn model and effort fields. Require public metadata or inspector evidence
-for `sol_advisor_luna_subagent`, `gpt-5.6-luna`, and `high` before accepting the result.
+ZCode delegation uses its native Agent path without an explicit model or effort; every
+child must attest `role=lite`, the parent runtime ID, and the persisted grunt tuple.
+Set `run_in_background=false`; background results lack the synchronous completion join
+required by the strict lane. Cursor, Claude Code, and Grok Build have no supported
+native delegation route.
 
 ## Exact route contracts
 
-- `solo`: the Sol / Ultra primary task implements, verifies, and self-reviews.
-- `delegate`: one Luna / High child completes the bounded packet; the primary task
-  inspects, reruns verification, reviews, and accepts or rejects it.
-- `audit`: the Sol / Ultra primary task renders the verdict. A Luna / High child may
-  gather bounded evidence only.
+- `solo`: the advisor implements, verifies, and self-reviews.
+- `delegate`: one grunt completes a bounded packet; the advisor verifies and accepts or
+  rejects it.
+- `audit`: the advisor renders the verdict; a grunt may gather evidence only.
 
-One child is the default maximum. Multiple children require explicitly independent
-parallel work. High-judgment or architectural work remains in the primary task.
+One native grunt is the default maximum. Multiple workers require explicitly
+independent parallel slices. High-judgment or architectural work remains primary.
 
-## Shared implementation contract
+## Required packet
 
-Every Luna child prompt must contain all five sections:
-
-~~~text
+```text
 OBJECTIVE
 <Observable outcome and why it matters.>
 
 FILES AND OWNERSHIP
 You own only:
-- <exact file or module>
+- <exact file, module, or read-only evidence scope>
 
-You are not alone in the codebase. Other agents or the user may be editing concurrently.
-Preserve their edits, do not revert unrelated work, and adapt to changes already present.
-Do not modify files outside your ownership.
+You are not alone in the codebase. Preserve concurrent edits, do not revert unrelated
+work, and do not modify files outside your ownership.
 
 INTERFACES
-- <Signatures, types, schemas, commands, or behavior that must remain compatible.>
+- <Signatures, types, schemas, commands, and behavior that must remain compatible.>
 
 CONSTRAINTS
-- <Repository conventions, safety boundaries, excluded scope, and settled decisions.>
+- <Safety boundaries, excluded scope, repository conventions, and settled decisions.>
+- Do not spawn subagents or nested workflows.
+- Do not render the final verdict or accept your own result.
 
 VERIFICATION
 - Run: <exact command>
   Success: <concrete expected result>
-- Inspect: <exact file, diff, or generated artifact>
+- Inspect: <exact file, diff, runtime record, or artifact>
   Success: <concrete expected evidence>
 
 RETURN
@@ -69,13 +70,14 @@ STATUS: complete | partial | blocked
 OBJECTIVE: <one-line restatement>
 CHANGES: <file-by-file summary from the actual diff>
 VERIFIED: <exact commands plus concrete output evidence>
-JUDGMENT CALLS: <decisions the specification left open, or none>
+JUDGMENT CALLS: <decisions the packet left open, or none>
 GAPS: <unfinished work, ambiguity, or none>
-~~~
+```
 
-## Parent acceptance
+## Advisor acceptance
 
-The primary task must inspect the actual diff or artifact, confirm owned-file scope,
-rerun every requested check, compare public and local runtime evidence when both exist,
-and perform final review. Any correction invalidates the prior review and requires
-verification plus a new primary-task review. Child claims never replace direct evidence.
+Inspect the actual diff or artifact, confirm ownership, rerun the requested checks,
+join the exact child runtime to its parent and immutable policy, and perform final
+review. Failed, timed-out, cancelled, incomplete, cached, missing, duplicate, or
+conflicting evidence invalidates the result. Corrections require fresh verification
+and another advisor review.

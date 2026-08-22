@@ -1,0 +1,14 @@
+{
+  "name": "sol-advisor",
+  "owner": {"name": "atebites-hub"},
+  "metadata": {"description": "Advisor guidance and truthful host capability diagnostics."},
+  "plugins": [
+    {
+      "name": "sol-advisor",
+      "version": "0.9.0",
+      "source": "plugins/sol-advisor",
+      "description": "Experimental Cursor detection; strict delegation disabled.",
+      "keywords": ["advisor", "routing", "cursor"]
+    }
+  ]
+}
