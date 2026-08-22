@@ -78,15 +78,18 @@ jq -r '.agent_ids[]' "$summary" > "$tmp/agent-ids"
 find "$agents" -mindepth 1 -maxdepth 1 -print > "$tmp/agent-files"
 [ "$(awk 'END {print NR+0}' "$tmp/agent-files")" -eq "$(jq '.agent_ids | length' "$summary")" ] || fail "trace inventory does not match model nodes."
 : > "$tmp/evidence.jsonl"
+if [ "$host" = zcode ]; then runtime_pattern='^sess_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+else runtime_pattern='^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+fi
 
 while IFS= read -r agent_id; do
   trace=$agents/agent-$agent_id.jsonl
   [ -f "$trace" ] && [ ! -L "$trace" ] || fail "agent trace is missing or unsafe."
-  runtime=$(jq -r --arg host "$host" --arg fingerprint "$recorded" --argjson route "$canonical" '
+  runtime=$(jq -r --arg host "$host" --arg fingerprint "$recorded" --arg pattern "$runtime_pattern" --argjson route "$canonical" '
     if type == "object" and .command == $host and .exitCode == 0 and .isError == false and .resultSubtype == "success" and
       (.routing | type) == "object" and (.routing | keys) == ["executor","model","policyFingerprint","reasoningEffort","runtimeId"] and
       .routing.policyFingerprint == $fingerprint and .routing.executor == $route.executor and .routing.model == $route.model and .routing.reasoningEffort == $route.reasoningEffort and
-      (.routing.runtimeId | type == "string" and test("^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"))
+      (.routing.runtimeId | type == "string" and test($pattern))
     then .routing.runtimeId else error("invalid trace") end
   ' "$trace" 2>/dev/null) || fail "trace has wrong executor, route, fingerprint, runtime id, or completion state."
   if [ "$host" = codex ]; then

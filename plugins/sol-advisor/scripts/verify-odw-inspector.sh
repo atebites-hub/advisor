@@ -60,8 +60,8 @@ printf '%s\n' "$codex_output" | jq -e '.host == "codex" and .agent_count == 2 an
 pass "two-node Codex ODW policy, trace, rollout, and distinct runtime evidence"
 
 zcode_run=$tmp/project/.odw/zcode-fixture/runs/run-zcode
-zcode_1=33333333-3333-4333-8333-333333333333
-zcode_2=44444444-4444-4444-8444-444444444444
+zcode_1=sess_33333333-3333-4333-8333-333333333333
+zcode_2=sess_44444444-4444-4444-8444-444444444444
 write_run zcode "$zcode_run" zai/grunt low "$zcode_1" "$zcode_2"
 zcode_output=$(sh "$inspector" --host zcode "$zcode_run")
 printf '%s\n' "$zcode_output" | jq -e '.host == "zcode" and .agent_count == 2 and ([.agents[].runtime_id] | unique | length) == 2 and all(.agents[]; .model == "zai/grunt" and .effort == "low" and .state == "completed")' >/dev/null || fail "ZCode ODW summary is invalid"
