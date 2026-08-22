@@ -2,7 +2,7 @@
 set -eu
 
 fail() { printf '%s\n' "ERROR: $*" >&2; exit 1; }
-valid_id() { printf '%s\n' "$1" | LC_ALL=C grep -Eq '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'; }
+valid_id() { printf '%s\n' "$1" | LC_ALL=C grep -Eq '^sess_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'; }
 valid_token() { printf '%s\n' "$1" | LC_ALL=C grep -Eq '^[A-Za-z0-9][A-Za-z0-9._:+/-]{0,255}$'; }
 file_mode() { stat -f %Lp "$1" 2>/dev/null || stat -c %a "$1" 2>/dev/null; }
 

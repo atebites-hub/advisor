@@ -51,8 +51,8 @@ pass "ZCode settings discovery is read-only and incomplete settings disable stri
 
 policy_a=$(jq -cn '{advisorModel:"zai/advisor",advisorEffort:"high",gruntModel:"zai/grunt",gruntEffort:"low"}')
 policy_b=$(jq -cn '{advisorModel:"zai/new-advisor",advisorEffort:"max",gruntModel:"zai/new-grunt",gruntEffort:"medium"}')
-root=11111111-1111-4111-8111-111111111111
-child=22222222-2222-4222-8222-222222222222
+root=sess_11111111-1111-4111-8111-111111111111
+child=sess_22222222-2222-4222-8222-222222222222
 
 write_native_payload() {
   file=$1 runtime=$2 role=$3 parent=$4 source=$5 model=$6 effort=$7 policy=$8 state=${9-running}
@@ -68,10 +68,12 @@ inspect_native() { file=$1 role=$2; sh "$inspector" --mode native --role "$role"
 root_payload=$tmp/root.json
 write_native_payload "$root_payload" "$root" main null new zai/advisor high "$policy_a"
 inspect_native "$root_payload" advisor >/dev/null || fail "valid new ZCode root attestation was rejected"
+write_native_payload "$tmp/bare-root.json" 11111111-1111-4111-8111-111111111111 main null new zai/advisor high "$policy_a"
+must_fail "bare UUID ZCode root" inspect_native "$tmp/bare-root.json" advisor
 write_config zai/new-advisor max zai/new-grunt medium
 write_native_payload "$root_payload" "$root" main null persisted zai/advisor high "$policy_a"
 inspect_native "$root_payload" advisor >/dev/null || fail "restored root reread changed plugin settings"
-new_root=33333333-3333-4333-8333-333333333333
+new_root=sess_33333333-3333-4333-8333-333333333333
 write_native_payload "$root_payload" "$new_root" main null new zai/new-advisor max "$policy_b"
 inspect_native "$root_payload" advisor >/dev/null || fail "new root did not accept new settings"
 write_native_payload "$root_payload" "$new_root" main null new zai/advisor high "$policy_a"
@@ -130,8 +132,8 @@ for mutation in missing_child failed_child wrong_child wrong_parent wrong_tool w
   case "$mutation" in
     missing_child) jq 'del(.childRuntimeEvidence)' "$tmp/zcode-agent-post.json" > "$tmp/mutated-hook.json" ;;
     failed_child) jq '.childRuntimeEvidence.state="failed"' "$tmp/zcode-agent-post.json" > "$tmp/mutated-hook.json" ;;
-    wrong_child) jq '.childRuntimeEvidence.childSessionId="33333333-3333-4333-8333-333333333333"' "$tmp/zcode-agent-post.json" > "$tmp/mutated-hook.json" ;;
-    wrong_parent) jq '.childRuntimeEvidence.parentSessionId="33333333-3333-4333-8333-333333333333"' "$tmp/zcode-agent-post.json" > "$tmp/mutated-hook.json" ;;
+    wrong_child) jq '.childRuntimeEvidence.childSessionId="sess_33333333-3333-4333-8333-333333333333"' "$tmp/zcode-agent-post.json" > "$tmp/mutated-hook.json" ;;
+    wrong_parent) jq '.childRuntimeEvidence.parentSessionId="sess_33333333-3333-4333-8333-333333333333"' "$tmp/zcode-agent-post.json" > "$tmp/mutated-hook.json" ;;
     wrong_tool) jq '.childRuntimeEvidence.parentToolCallId="other-tool"' "$tmp/zcode-agent-post.json" > "$tmp/mutated-hook.json" ;;
     wrong_policy) jq '.childRuntimeEvidence.runtimeAttestation.rolePolicyFingerprint=("a"*64)' "$tmp/zcode-agent-post.json" > "$tmp/mutated-hook.json" ;;
     wrong_child_model) jq '.childRuntimeEvidence.runtimeAttestation.model="zai/other"' "$tmp/zcode-agent-post.json" > "$tmp/mutated-hook.json" ;;
@@ -143,7 +145,7 @@ must_fail "failed ZCode Agent result" env CLAUDE_PLUGIN_ROOT=$plugin_dir ZCODE_C
 pass "ZCode native delegation is foreground-only and accepts only joined completed child evidence"
 
 zcode_odw_hook=$tmp/zcode-odw-hook.json
-jq -n --arg runtime 55555555-5555-4555-8555-555555555555 '{
+jq -n --arg runtime sess_55555555-5555-4555-8555-555555555555 '{
   hookEventName:"SessionStart",
   runtimeAttestation:{type:"zcode_runtime_attestation",schemaVersion:1,executor:"zcode",route:"odw",runtimeId:$runtime,runtimeVersion:"0.16.3",sessionId:$runtime,role:"main",parentSessionId:null,policySource:null,rolePolicy:null,rolePolicyFingerprint:null,model:"zai/grunt",reasoningEffort:"low"}
 }' > "$zcode_odw_hook"
@@ -156,7 +158,7 @@ pass "marked ZCode ODW workers avoid native-root inspection and cannot nest Agen
 
 route=$tmp/zcode-route.json
 jq -n '{executor:"zcode",model:"zai/grunt",reasoningEffort:"low"}' > "$route"; chmod 600 "$route"
-odw=44444444-4444-4444-8444-444444444444
+odw=sess_44444444-4444-4444-8444-444444444444
 canonical=$(jq -c '{executor,model,reasoningEffort}' "$route")
 fingerprint=$(printf '%s' "$canonical" | shasum -a 256 | awk '{print $1}')
 trace=$tmp/zcode-trace.json
