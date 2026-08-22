@@ -12,14 +12,14 @@ required_files='
 README.md
 .agents/plugins/marketplace.json
 .cursor-plugin/marketplace.json
+.cursor-plugin/plugin.json
 .claude-plugin/marketplace.json
+.claude-plugin/plugin.json
 .grok-plugin/marketplace.json
+.grok-plugin/plugin.json
+.zcode-plugin/plugin.json
 marketplace.json
 plugins/sol-advisor/.codex-plugin/plugin.json
-plugins/sol-advisor/.cursor-plugin/plugin.json
-plugins/sol-advisor/.claude-plugin/plugin.json
-plugins/sol-advisor/.grok-plugin/plugin.json
-plugins/sol-advisor/.zcode-plugin/plugin.json
 plugins/sol-advisor/hooks/hooks.json
 plugins/sol-advisor/hooks/session-context.sh
 plugins/sol-advisor/hooks/enforce-codex.sh
@@ -48,7 +48,14 @@ done
 for retired in \
   plugins/sol-advisor/agents/sol-advisor-luna-subagent.toml \
   plugins/sol-advisor/hooks/enforce-luna-subagent.sh \
-  plugins/sol-advisor/scripts/inspect-agent-runtime.sh
+  plugins/sol-advisor/scripts/inspect-agent-runtime.sh \
+  plugins/sol-advisor/.cursor-plugin \
+  plugins/sol-advisor/.claude-plugin \
+  plugins/sol-advisor/.grok-plugin \
+  plugins/sol-advisor/.zcode-plugin \
+  hooks \
+  skills \
+  bin
 do
   [ ! -e "$repo_dir/$retired" ] && [ ! -L "$repo_dir/$retired" ] || fail "retired active file remains: $retired"
 done
@@ -78,22 +85,23 @@ jq -e '
 ' "$codex_manifest" >/dev/null || fail "Codex manifest identity or release metadata is invalid"
 
 for manifest in \
-  "$plugin_dir/.cursor-plugin/plugin.json" \
-  "$plugin_dir/.claude-plugin/plugin.json" \
-  "$plugin_dir/.grok-plugin/plugin.json"
+  "$repo_dir/.cursor-plugin/plugin.json" \
+  "$repo_dir/.claude-plugin/plugin.json" \
+  "$repo_dir/.grok-plugin/plugin.json"
 do
   jq -e '
     .name == "sol-advisor" and .version == "0.9.0" and
+    .skills == "./plugins/sol-advisor/skills" and
     (.description | test("experimental detection; strict delegation disabled"; "i")) and
     (has("agents") | not) and (has("hooks") | not) and (has("mcpServers") | not)
   ' "$manifest" >/dev/null || fail "experimental manifest overclaims or has wrong version: $manifest"
 done
 jq -e '
   .name == "sol-advisor" and .version == "0.9.0" and
-  .hooks == "./hosts/zcode/hooks/hooks.json" and .skills == "./skills" and
+  .hooks == "./plugins/sol-advisor/hosts/zcode/hooks/hooks.json" and .skills == "./plugins/sol-advisor/skills" and
   (.userConfig | keys == ["advisor_effort","advisor_model","grunt_effort","grunt_model"]) and
   all(.userConfig[]; .type == "string" and .required == true and .sensitive == false)
-' "$plugin_dir/.zcode-plugin/plugin.json" >/dev/null || fail "ZCode manifest contract is invalid"
+' "$repo_dir/.zcode-plugin/plugin.json" >/dev/null || fail "ZCode manifest contract is invalid"
 pass "all host manifests use Advisor 0.9.0 and truthful support labels"
 
 catalogs="
@@ -106,10 +114,14 @@ printf '%s\n' "$catalogs" | sed '/^$/d' | while IFS= read -r catalog; do
   jq -e '(.plugins | length) == 1 and .plugins[0].name == "sol-advisor" and .plugins[0].version == "0.9.0"' "$catalog" >/dev/null ||
     fail "catalog identity/version is invalid: $catalog"
   source_path=$(jq -r '.plugins[0].source | if type == "object" then .path else . end' "$catalog")
-  case "$source_path" in ./*|plugins/*) ;; *) fail "catalog source is not repository-relative: $catalog" ;; esac
+  case "$source_path" in .|./*|plugins/*) ;; *) fail "catalog source is not repository-relative: $catalog" ;; esac
   [ -d "$repo_dir/${source_path#./}" ] || fail "catalog source does not resolve: $catalog -> $source_path"
 done
 jq -e '.interface.displayName == "Advisor"' "$repo_dir/.agents/plugins/marketplace.json" >/dev/null || fail "Codex catalog display name is not Advisor"
+for catalog in "$repo_dir/marketplace.json" "$repo_dir/.cursor-plugin/marketplace.json" "$repo_dir/.claude-plugin/marketplace.json" "$repo_dir/.grok-plugin/marketplace.json"; do
+  [ "$(jq -r '.plugins[0].source | if type == "object" then .path else . end' "$catalog")" = . ] || fail "non-Codex host must install the repository-root package: $catalog"
+done
+[ "$(jq -r '.plugins[0].source.path' "$repo_dir/.agents/plugins/marketplace.json")" = ./plugins/sol-advisor ] || fail "Codex catalog must install only the Codex package root"
 pass "catalog sources resolve inside the repository"
 
 jq -e '
@@ -124,17 +136,17 @@ jq -e '
   (.hooks.PreToolUse | length) == 1 and
   (.hooks.PostToolUse | length) == 1 and
   (.hooks.PostToolUseFailure | length) == 1 and
-  all(.hooks[][]; all(.hooks[]; .command == "${CLAUDE_PLUGIN_ROOT}/hosts/zcode/hooks/enforce.sh" and .timeoutMs == 5000))
+  all(.hooks[][]; all(.hooks[]; .command == "${CLAUDE_PLUGIN_ROOT}/plugins/sol-advisor/hosts/zcode/hooks/enforce.sh" and .timeoutMs == 5000))
 ' "$plugin_dir/hosts/zcode/hooks/hooks.json" >/dev/null || fail "ZCode lifecycle hook wiring is invalid"
 pass "Codex and ZCode hooks point only at packaged strict handlers"
 
 active_docs="
 $repo_dir/README.md
 $plugin_dir/.codex-plugin/plugin.json
-$plugin_dir/.cursor-plugin/plugin.json
-$plugin_dir/.claude-plugin/plugin.json
-$plugin_dir/.grok-plugin/plugin.json
-$plugin_dir/.zcode-plugin/plugin.json
+$repo_dir/.cursor-plugin/plugin.json
+$repo_dir/.claude-plugin/plugin.json
+$repo_dir/.grok-plugin/plugin.json
+$repo_dir/.zcode-plugin/plugin.json
 $plugin_dir/skills/advisor/SKILL.md
 $plugin_dir/skills/orchestration/SKILL.md
 $plugin_dir/skills/orchestration/agents/openai.yaml
@@ -144,7 +156,7 @@ $plugin_dir/skills/orchestration/references/odw.md"
 if printf '%s\n' "$active_docs" | sed '/^$/d' | xargs rg -n -i 'terra|sol_advisor_|Sol Advisor|ODW v0\.2|0\.8\.0'; then
   fail "retired product or routing vocabulary remains in active surfaces"
 fi
-if rg -n 'gpt-5\.6-(sol|luna)' "$plugin_dir/skills" "$plugin_dir/.codex-plugin" "$plugin_dir/.cursor-plugin" "$plugin_dir/.claude-plugin" "$plugin_dir/.grok-plugin" "$plugin_dir/.zcode-plugin"; then
+if rg -n 'gpt-5\.6-(sol|luna)' "$plugin_dir/skills" "$plugin_dir/.codex-plugin" "$repo_dir/.cursor-plugin/plugin.json" "$repo_dir/.claude-plugin/plugin.json" "$repo_dir/.grok-plugin/plugin.json" "$repo_dir/.zcode-plugin/plugin.json"; then
   fail "generic contracts hard-code the Codex default tuple"
 fi
 grep -Fq 'Grok Bot' "$repo_dir/README.md" || fail "README does not explicitly exclude Grok Bot"

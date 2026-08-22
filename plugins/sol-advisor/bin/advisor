@@ -208,7 +208,8 @@ probe_host() {
       fi
     fi
   elif [ "$1" = zcode ]; then
-    [ -f "$plugin_dir/.zcode-plugin/plugin.json" ] && [ -f "$plugin_dir/hosts/zcode/hooks/hooks.json" ] && [ -f "$plugin_dir/hosts/zcode/hooks/enforce.sh" ] && check_files_current=true
+    { [ -f "$plugin_dir/.zcode-plugin/plugin.json" ] || [ -f "$plugin_dir/../../.zcode-plugin/plugin.json" ]; } &&
+      [ -f "$plugin_dir/hosts/zcode/hooks/hooks.json" ] && [ -f "$plugin_dir/hosts/zcode/hooks/enforce.sh" ] && check_files_current=true
   fi
 }
 

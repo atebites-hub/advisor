@@ -19,14 +19,14 @@ cleanup() { case "$tmp" in "$tmp_base"/advisor-host-verify.*) rm -rf "$tmp" ;; e
 trap cleanup 0 HUP INT TERM
 
 jq -e '
-  .name == "sol-advisor" and .version == "0.9.0" and .hooks == "./hosts/zcode/hooks/hooks.json" and
+  .name == "sol-advisor" and .version == "0.9.0" and .skills == "./plugins/sol-advisor/skills" and .hooks == "./plugins/sol-advisor/hosts/zcode/hooks/hooks.json" and
   (.userConfig | keys == ["advisor_effort","advisor_model","grunt_effort","grunt_model"]) and
   all(.userConfig[]; .type == "string" and .required == true and .sensitive == false)
-' "$plugin_dir/.zcode-plugin/plugin.json" >/dev/null || fail "ZCode manifest settings or hook path are invalid"
+' "$repo_dir/.zcode-plugin/plugin.json" >/dev/null || fail "ZCode manifest settings or hook path are invalid"
 jq -e '
-  .version == "0.9.0" and (has("agents") | not) and (has("hooks") | not) and (has("mcpServers") | not) and
+  .version == "0.9.0" and .skills == "./plugins/sol-advisor/skills" and (has("agents") | not) and (has("hooks") | not) and (has("mcpServers") | not) and
   (.description | test("experimental detection; strict delegation disabled"; "i"))
-' "$plugin_dir/.grok-plugin/plugin.json" "$plugin_dir/.cursor-plugin/plugin.json" "$plugin_dir/.claude-plugin/plugin.json" >/dev/null || fail "experimental host manifests imply strict delegation"
+' "$repo_dir/.grok-plugin/plugin.json" "$repo_dir/.cursor-plugin/plugin.json" "$repo_dir/.claude-plugin/plugin.json" >/dev/null || fail "experimental host manifests imply strict delegation"
 jq empty "$repo_dir/marketplace.json" "$repo_dir/.grok-plugin/marketplace.json" "$repo_dir/.cursor-plugin/marketplace.json" "$repo_dir/.claude-plugin/marketplace.json" >/dev/null
 pass "ZCode strict manifest and content-only experimental host manifests"
 

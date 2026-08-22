@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "process",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hosts/zcode/hooks/enforce.sh",
+            "command": "${CLAUDE_PLUGIN_ROOT}/plugins/sol-advisor/hosts/zcode/hooks/enforce.sh",
             "timeoutMs": 5000
           }
         ]
@@ -17,7 +17,7 @@
         "hooks": [
           {
             "type": "process",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hosts/zcode/hooks/enforce.sh",
+            "command": "${CLAUDE_PLUGIN_ROOT}/plugins/sol-advisor/hosts/zcode/hooks/enforce.sh",
             "timeoutMs": 5000
           }
         ]
@@ -29,7 +29,7 @@
         "hooks": [
           {
             "type": "process",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hosts/zcode/hooks/enforce.sh",
+            "command": "${CLAUDE_PLUGIN_ROOT}/plugins/sol-advisor/hosts/zcode/hooks/enforce.sh",
             "timeoutMs": 5000
           }
         ]
@@ -41,7 +41,7 @@
         "hooks": [
           {
             "type": "process",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hosts/zcode/hooks/enforce.sh",
+            "command": "${CLAUDE_PLUGIN_ROOT}/plugins/sol-advisor/hosts/zcode/hooks/enforce.sh",
             "timeoutMs": 5000
           }
         ]
