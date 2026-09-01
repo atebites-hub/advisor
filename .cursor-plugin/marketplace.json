@@ -1,14 +1,12 @@
 {
   "name": "sol-advisor",
   "owner": {"name": "atebites-hub"},
-  "metadata": {"description": "Advisor guidance and truthful host capability diagnostics."},
+  "metadata": {"description": "Advisor for Cursor IDE and Cursor CLI with first-class install and truthful routing diagnostics."},
   "plugins": [
     {
       "name": "sol-advisor",
-      "version": "0.9.2",
       "source": ".",
-      "description": "Experimental Cursor detection; strict delegation disabled.",
-      "keywords": ["advisor", "routing", "cursor"]
+      "description": "Advisor skills, slash commands, and doctor for Cursor IDE and Cursor CLI. Strict delegation stays disabled until runtime evidence matches the Advisor contract."
     }
   ]
 }

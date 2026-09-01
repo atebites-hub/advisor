@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [
+      {
+        "command": "./plugins/sol-advisor/hosts/cursor/hooks/session-context.sh"
+      }
+    ]
+  }
+}

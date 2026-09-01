@@ -64,7 +64,11 @@ if path_exists "$sessions" && { [ -L "$sessions" ] || [ ! -d "$sessions" ]; }; t
 
 validate_snapshot() {
   [ -f "$snapshot" ] && [ ! -L "$snapshot" ] || return 1
-  mode=$(stat -f %Lp "$snapshot" 2>/dev/null || stat -c %a "$snapshot" 2>/dev/null) || return 1
+  if stat -c %a "$snapshot" >/dev/null 2>&1; then
+    mode=$(stat -c %a "$snapshot")
+  else
+    mode=$(stat -f %Lp "$snapshot")
+  fi || return 1
   [ "$mode" = 600 ] || return 1
   jq -e --arg runtime "$runtime_id" '
     type == "object" and keys == ["createdAt","host","policy","policyFingerprint","runtimeId","schemaVersion"] and

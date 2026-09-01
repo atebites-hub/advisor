@@ -19,7 +19,12 @@ while [ "$#" -gt 0 ]; do
     *) [ -z "$run_dir" ] || fail "extra positional argument: $1"; run_dir=$1; shift ;;
   esac
 done
-case "$host" in codex|zcode) ;; '') fail "--host is required." ;; *) fail "unsupported Advisor ODW host: $host" ;; esac
+case "$host" in
+  codex|zcode) ;;
+  cursor) fail "unsupported Advisor ODW host: cursor (print-mode result omits observed model/effort/role/parent; requested --model is not attestation)" ;;
+  '') fail "--host is required." ;;
+  *) fail "unsupported Advisor ODW host: $host" ;;
+esac
 [ -n "$run_dir" ] || fail "run directory is required."
 case "$run_dir" in /*) ;; *) fail "run directory must be absolute and canonical." ;; esac
 [ -d "$run_dir" ] && [ ! -L "$run_dir" ] || fail "run directory is unavailable or unsafe."

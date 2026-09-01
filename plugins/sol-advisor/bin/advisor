@@ -10,6 +10,7 @@ usage() {
     '  advisor configure --host codex --advisor-model MODEL --advisor-effort EFFORT --grunt-model MODEL --grunt-effort EFFORT' \
     '  advisor apply --host codex' \
     '  advisor doctor --host codex|zcode|grok|cursor|claude [--json]' \
+    '  Cursor CLI is `agent` / `cursor-agent`. Doctor reports gaps; it does not enable delegation.' \
     '  advisor remove --host codex'
 }
 
@@ -30,7 +31,16 @@ case "$config_dir" in /|//) fail "refusing to use the filesystem root as Advisor
 profile=$config_dir/codex.json
 
 path_exists() { [ -e "$1" ] || [ -L "$1" ]; }
-file_mode() { stat -f %Lp "$1" 2>/dev/null || stat -c %a "$1" 2>/dev/null; }
+# GNU coreutils first: `stat -f` is --file-system, not BSD format. Trying BSD
+# first prints filesystem status to stdout on Linux, then concatenates the GNU
+# fallback, so mode checks see garbage instead of 600.
+file_mode() {
+  if stat -c %a "$1" >/dev/null 2>&1; then
+    stat -c %a "$1"
+  else
+    stat -f %Lp "$1"
+  fi
+}
 
 validate_config_dir() {
   if path_exists "$config_dir" && { [ -L "$config_dir" ] || [ ! -d "$config_dir" ]; }; then
@@ -180,24 +190,100 @@ configure() {
   printf '%s\n' 'Run `$advisor apply --host codex`, then start a new session.'
 }
 
+looks_like_cursor_cli() {
+  name=$1
+  command -v "$name" >/dev/null 2>&1 || return 1
+  case "$name" in
+    cursor-agent|cursor) return 0 ;;
+    agent)
+      "$name" --help 2>/dev/null | grep -Fq -- '--plugin-dir'
+      ;;
+    *) return 1 ;;
+  esac
+}
+
+is_cursor_plugin_root() {
+  [ -f "$1/.cursor-plugin/plugin.json" ] && [ ! -L "$1/.cursor-plugin/plugin.json" ] &&
+    jq -e '.name == "sol-advisor"' "$1/.cursor-plugin/plugin.json" >/dev/null 2>&1
+}
+
+cursor_tree_complete() {
+  [ -x "$1/plugins/sol-advisor/bin/advisor" ] &&
+    [ -f "$1/plugins/sol-advisor/skills/advisor/SKILL.md" ] &&
+    [ -f "$1/plugins/sol-advisor/skills/orchestration/SKILL.md" ] &&
+    [ -f "$1/plugins/sol-advisor/hosts/cursor/commands/advisor.md" ] &&
+    [ -f "$1/plugins/sol-advisor/hosts/cursor/hooks/hooks.json" ]
+}
+
+try_cursor_plugin_root() {
+  source_name=$1
+  path=$2
+  [ -n "$path" ] || return 1
+  case "$path" in /*) ;; *) path=$(pwd -P)/$path ;; esac
+  if is_cursor_plugin_root "$path"; then
+    check_plugin_root=$path
+    check_plugin_root_source=$source_name
+    return 0
+  fi
+  if [ -x "$path/bin/advisor" ] && [ -f "$path/skills/advisor/SKILL.md" ]; then
+    parent=$(CDPATH= cd "$path/../.." && pwd) || return 1
+    if is_cursor_plugin_root "$parent"; then
+      check_plugin_root=$parent
+      check_plugin_root_source=$source_name
+      return 0
+    fi
+  fi
+  return 1
+}
+
+resolve_cursor_plugin_root() {
+  check_plugin_root=
+  check_plugin_root_source=none
+  try_cursor_plugin_root CURSOR_PLUGIN_ROOT "${CURSOR_PLUGIN_ROOT-}" && return 0
+  try_cursor_plugin_root PLUGIN_ROOT "${PLUGIN_ROOT-}" && return 0
+  if [ -n "${HOME-}" ]; then
+    try_cursor_plugin_root local "$HOME/.cursor/plugins/local/sol-advisor" && return 0
+  fi
+  packaged_root=$(CDPATH= cd "$plugin_dir/../.." && pwd) || return 0
+  if is_cursor_plugin_root "$packaged_root"; then
+    check_plugin_root=$packaged_root
+    check_plugin_root_source=packaged
+  fi
+}
+
 probe_host() {
   check_cli_present=false check_cli_version= check_files_current=false
   check_hooks_configured=false check_hook_trust_observable=false check_hooks_trusted=false
   check_odw_version=0.3.0 check_odw_compatible=false
+  check_cli_binary= check_cli_kind=none check_plugin_root= check_plugin_root_source=none
+  check_cursor_odw_host= check_activation_hook=false check_enforcement_hook=false
   case "$1" in
     codex) candidates=codex ;;
     zcode) candidates=zcode ;;
-    cursor) candidates='cursor-agent cursor' ;;
+    cursor) candidates='cursor-agent agent cursor' ;;
     claude) candidates=claude ;;
     grok) candidates=grok ;;
     *) candidates= ;;
   esac
   for candidate in $candidates; do
-    if command -v "$candidate" >/dev/null 2>&1; then
-      check_cli_present=true
-      check_cli_version=$("$candidate" --version 2>/dev/null | sed -n '1,2p' | tr '\n' ' ' | sed 's/[[:space:]]*$//')
-      break
+    if [ "$1" = cursor ]; then
+      looks_like_cursor_cli "$candidate" || continue
+      check_cli_binary=$candidate
+      case "$candidate" in
+        cursor-agent) check_cli_kind=cursor-agent ;;
+        agent) check_cli_kind=cursor-cli-agent ;;
+        cursor) check_cli_kind=cursor ;;
+        *) check_cli_kind=none ;;
+      esac
+    else
+      command -v "$candidate" >/dev/null 2>&1 || continue
     fi
+    check_cli_present=true
+    check_cli_version=$("$candidate" --version 2>/dev/null | sed -n '1,2p' | tr '\n' ' ' | sed 's/[[:space:]]*$//')
+    if [ -z "$check_cli_version" ]; then
+      check_cli_version=$("$candidate" about 2>/dev/null | sed -n '1,2p' | tr '\n' ' ' | sed 's/[[:space:]]*$//')
+    fi
+    break
   done
   if [ "$1" = codex ]; then
     [ -f "$plugin_dir/hooks/hooks.json" ] && [ -f "$plugin_dir/hooks/enforce-codex.sh" ] && [ -f "$plugin_dir/hooks/session-context.sh" ] && check_hooks_configured=true
@@ -210,7 +296,50 @@ probe_host() {
   elif [ "$1" = zcode ]; then
     { [ -f "$plugin_dir/.zcode-plugin/plugin.json" ] || [ -f "$plugin_dir/../../.zcode-plugin/plugin.json" ]; } &&
       [ -f "$plugin_dir/hosts/zcode/hooks/hooks.json" ] && [ -f "$plugin_dir/hosts/zcode/hooks/enforce.sh" ] && check_files_current=true
+  elif [ "$1" = cursor ]; then
+    [ "${ODW_HOST-}" = cursor ] && check_cursor_odw_host=cursor
+    resolve_cursor_plugin_root
+    if [ -n "$check_plugin_root" ] && cursor_tree_complete "$check_plugin_root"; then
+      check_files_current=true
+    elif [ -z "$check_plugin_root" ] && [ -x "$plugin_dir/bin/advisor" ] &&
+      [ -f "$plugin_dir/skills/advisor/SKILL.md" ] &&
+      [ -f "$plugin_dir/hosts/cursor/commands/advisor.md" ] &&
+      [ -f "$plugin_dir/hosts/cursor/hooks/hooks.json" ]; then
+      check_files_current=true
+    fi
+    cursor_hooks=$plugin_dir/hosts/cursor/hooks/hooks.json
+    if [ -n "$check_plugin_root" ] && [ -f "$check_plugin_root/plugins/sol-advisor/hosts/cursor/hooks/hooks.json" ]; then
+      cursor_hooks=$check_plugin_root/plugins/sol-advisor/hosts/cursor/hooks/hooks.json
+    fi
+    if [ -f "$cursor_hooks" ] && jq -e '.hooks | keys == ["sessionStart"]' "$cursor_hooks" >/dev/null 2>&1; then
+      check_hooks_configured=true
+      check_activation_hook=true
+    fi
   fi
+}
+
+cursor_diagnostics() {
+  jq -n --arg cli_binary "$check_cli_binary" --arg cli_kind "$check_cli_kind" \
+    --arg plugin_root "$check_plugin_root" --arg plugin_root_source "$check_plugin_root_source" \
+    --arg odw_host "$check_cursor_odw_host" \
+    --argjson activation "$check_activation_hook" --argjson enforcement "$check_enforcement_hook" '{
+      cliBinary:$cli_binary,cliKind:$cli_kind,pluginRoot:$plugin_root,pluginRootSource:$plugin_root_source,
+      odwHost:$odw_host,activationHook:$activation,enforcementHook:$enforcement,
+      nativeGaps:[
+        "plugin_agents_cannot_pin_model_or_effort",
+        "subagent_start_omits_child_effort",
+        "subagent_stop_omits_child_model_and_effort",
+        "hook_model_params_are_selected_settings",
+        "hook_runner_fail_open"
+      ],
+      odwGaps:[
+        "cursor_cli_has_no_effort_flag",
+        "print_result_omits_model_and_effort",
+        "stream_init_model_is_display_name",
+        "requested_model_is_not_runtime_attestation",
+        "no_role_or_parent_evidence"
+      ]
+    }'
 }
 
 doctor_result() {
@@ -246,8 +375,12 @@ doctor() {
   need jq
   probe_host "$parsed_host"
   case "$parsed_host" in
-    cursor|claude)
-      doctor_result "$parsed_host" runtime_effort_attestation_unavailable false none false '' '' false false '' '' false false disabled disabled
+    cursor)
+      doctor_result cursor runtime_effort_attestation_unavailable false none false '' '' false false '' '' false false disabled disabled |
+        jq --argjson diagnostics "$(cursor_diagnostics)" '. + {diagnostics:$diagnostics}'
+      return 1 ;;
+    claude)
+      doctor_result claude runtime_effort_attestation_unavailable false none false '' '' false false '' '' false false disabled disabled
       return 1 ;;
     grok)
       doctor_result grok hook_failure_is_fail_open false none false '' '' false false '' '' false false disabled disabled

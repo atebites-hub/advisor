@@ -1,11 +1,14 @@
 {
   "name": "sol-advisor",
-  "version": "0.9.2",
-  "description": "Advisor guidance for Cursor: experimental detection; strict delegation disabled until resolved effort is authoritative.",
+  "displayName": "Advisor",
+  "version": "0.9.3",
+  "description": "Advisor for Cursor IDE and Cursor CLI (`agent`): skills, slash commands, session activation, and honest doctor. Strict delegation stays disabled until Cursor runtime evidence can prove role, model, effort, parent, and completion.",
   "author": {"name": "atebites-hub"},
   "homepage": "https://github.com/atebites-hub/sol-advisor",
   "repository": "https://github.com/atebites-hub/sol-advisor",
   "license": "MIT",
   "keywords": ["advisor", "routing", "cursor", "diagnostics"],
-  "skills": "./plugins/sol-advisor/skills"
+  "skills": "./plugins/sol-advisor/skills",
+  "commands": "./plugins/sol-advisor/hosts/cursor/commands",
+  "hooks": "./plugins/sol-advisor/hosts/cursor/hooks/hooks.json"
 }

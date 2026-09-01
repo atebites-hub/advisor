@@ -3,6 +3,14 @@ set -eu
 
 pass() { printf '%s\n' "PASS: $*"; }
 fail() { printf '%s\n' "FAIL: $*" >&2; exit 1; }
+# GNU coreutils first: `stat -f` is --file-system, not BSD format.
+file_mode() {
+  if stat -c %a "$1" >/dev/null 2>&1; then
+    stat -c %a "$1"
+  else
+    stat -f %Lp "$1"
+  fi
+}
 
 script_dir=$(CDPATH= cd "$(dirname "$0")" && pwd) || exit 1
 advisor=$script_dir/../bin/advisor
@@ -39,7 +47,7 @@ configure_output=$(run_advisor configure --host codex \
 printf '%s\n' "$configure_output" | grep -Fq "WROTE: $profile" || fail "configure did not report the written profile"
 printf '%s\n' "$configure_output" | grep -Fq '$advisor apply --host codex' || fail "configure omitted the installed-skill apply command"
 [ -f "$profile" ] && [ ! -L "$profile" ] || fail "configure did not write a regular profile"
-[ "$(stat -f %Lp "$profile" 2>/dev/null || stat -c %a "$profile")" = 600 ] || fail "profile mode is not 600"
+[ "$(file_mode "$profile")" = 600 ] || fail "profile mode is not 600"
 jq -e '
   keys == ["advisor","grunt","host","schemaVersion"] and
   .schemaVersion == 1 and .host == "codex" and
@@ -111,6 +119,9 @@ for host_code in 'cursor runtime_effort_attestation_unavailable' 'claude runtime
   jq -e --arg host "$1" --arg code "$2" '.host == $host and .code == $code and .strict == false' "$tmp_dir/$1.json" >/dev/null ||
     fail "$1 doctor used the wrong capability code"
 done
+jq -e '.diagnostics.enforcementHook == false and (.diagnostics.nativeGaps | type == "array") and (.diagnostics.odwGaps | type == "array")' \
+  "$tmp_dir/cursor.json" >/dev/null || fail "Cursor doctor omitted first-class diagnostics"
+jq -e 'has("diagnostics") | not' "$tmp_dir/claude.json" >/dev/null || fail "Claude doctor gained a Cursor diagnostics object"
 if run_advisor doctor --host grok-bot --json >/dev/null 2>&1; then fail "Grok Bot was not excluded"; fi
 pass "truthful Cursor Claude Grok and Grok Bot capability status"
 
@@ -132,7 +143,7 @@ ADVISOR_CONFIG_HOME=$remove_home ADVISOR_MODEL_CATALOG=$catalog sh "$advisor" co
 ADVISOR_CONFIG_HOME=$remove_home ADVISOR_MODEL_CATALOG=$catalog ADVISOR_AGENT_DIR=$remove_home/agents sh "$advisor" apply --host codex >/dev/null
 [ -f "$remove_home/agents/advisor-grunt.toml" ] || fail "apply did not install the rendered Codex role"
 applied_doctor=$(ADVISOR_CONFIG_HOME=$remove_home ADVISOR_MODEL_CATALOG=$catalog ADVISOR_AGENT_DIR=$remove_home/agents sh "$advisor" doctor --host codex --json || true)
-printf '%s\n' "$applied_doctor" | jq -e '.checks.generatedFiles.current == true' >/dev/null || fail "doctor did not recognize the exact generated Codex role"
+printf '%s\n' "$applied_doctor" | jq -e '.checks.generatedFiles.current == true and (has("diagnostics") | not)' >/dev/null || fail "doctor did not recognize the exact generated Codex role"
 mkdir -p "$remove_home/sessions"
 printf '%s\n' keep > "$remove_home/unrelated.txt"
 runtime_id=11111111-1111-4111-8111-111111111111

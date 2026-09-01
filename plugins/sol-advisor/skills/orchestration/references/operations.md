@@ -9,12 +9,76 @@ all user-facing surfaces are Advisor.
 |---|---|---|---|
 | Codex CLI / ChatGPT Codex app | supported | supported | trusted hooks plus rollout evidence |
 | maintained ZCode fork | supported | supported | runtime 0.16.3 attestation plus plugin hooks |
-| Cursor | disabled | disabled | resolved effort is not authoritative |
+| Cursor IDE / Cursor CLI (`agent`) | disabled | disabled | first-class plugin and CLI install; native child effort and ODW host attestation are still missing; hook failures are fail-open |
 | Claude Code | disabled | disabled | resolved effort is not authoritative |
 | Grok Build | disabled | disabled | hook-handler failures are fail-open |
 | Grok Bot | excluded | excluded | outside product scope |
 
 Configuration intent is never runtime proof.
+
+## Cursor lifecycle
+
+Cursor is a first-class Advisor plugin host for install, skills, slash commands,
+`sessionStart` activation, and `doctor`. It is not a strict delegation host.
+
+The Cursor plugin lives at repository root `.cursor-plugin/plugin.json` with
+skills at `./plugins/sol-advisor/skills`, commands at
+`./plugins/sol-advisor/hosts/cursor/commands`, and hooks at
+`./plugins/sol-advisor/hosts/cursor/hooks/hooks.json`. Marketplace entries follow
+the official Cursor schema and may only contain `name`, `source`, `description`,
+and optional `minClientVersions`.
+
+CLI install does not require Customize:
+
+```sh
+sh plugins/sol-advisor/scripts/install-cursor.sh
+agent --plugin-dir "$HOME/.cursor/plugins/local/sol-advisor"
+```
+
+The installer also links skills into `~/.cursor/skills` because Cursor CLI may
+not load plugin skills. `find-helper.sh` resolves
+`plugins/sol-advisor/bin/advisor` from `CURSOR_PLUGIN_ROOT`, `PLUGIN_ROOT`, or
+the local plugin path. There is no PATH `advisor` binary.
+
+`doctor --host cursor` detects `cursor-agent`, Cursor CLI `agent` (help text
+contains `--plugin-dir`), `cursor`, `CURSOR_PLUGIN_ROOT`, `PLUGIN_ROOT`, and
+`ODW_HOST=cursor`. It always returns `strict:false`,
+`code:runtime_effort_attestation_unavailable`, and `nativeLane`/`odwLane`
+`disabled`, plus a `diagnostics` object naming the remaining gaps. Settings,
+`--model`, and hook `model_params` are not runtime proof.
+
+`sessionStart` is the only registered Cursor hook. Cursor documents camelCase
+events (`sessionStart`, `preToolUse`, `subagentStart`). That hook is
+fire-and-forget: it injects orchestration `additional_context` and cannot block
+session creation. Cloud agents do not run `sessionStart`. Do not copy Codex
+`SessionStart`/`PreToolUse` payloads or fail-closed spawn guards onto Cursor.
+
+Native Cursor still cannot satisfy the evidence contract:
+
+- plugin `agents` cannot pin model or effort
+- `subagentStart` exposes `subagent_model` and `parent_conversation_id` but not
+  child effort
+- `subagentStop` exposes completion status but not child model or effort
+- hook `model` / `model_params.effort` are selected composer settings
+- hook failures other than exit 2 are fail-open; `failClosed` is documented for
+  `beforeShellExecution` / `beforeMCPExecution`, not as a complete Advisor
+  spawn/accept path
+
+ODW's published `cursor` executor can spawn `cursor-agent`/`agent` with
+`--model` and records `session_id` plus print-mode success. That is not enough:
+
+- Cursor CLI has no effort flag in the documented parameter set
+- `--output-format json|stream-json` result objects omit model and effort
+- stream `system.init.model` is a display name
+- requested `--model` is not observed runtime attestation
+- there is no role or parent join comparable to Codex rollouts or ZCode
+  `zcode_runtime_attestation`
+
+Keep `inspect-odw-run.sh --host cursor` rejected. Promote Cursor only after a
+current-version live fixture proves primary and child model, child effort, child
+runtime id, parent, and completed lifecycle, and after hook or executor failure
+is fail-closed. Sibling ODW Cursor CLI work does not change this gate until that
+evidence exists on a merged artifact.
 
 ## Codex lifecycle
 
@@ -89,7 +153,9 @@ accepted as ODW evidence, or vice versa.
 ## Configuration and removal
 
 The installed `advisor` skill resolves `../../bin/advisor`; no executable is exported
-to `PATH`. `configure` and `apply` currently write only Codex-owned Advisor state.
+to `PATH`. Cursor commands resolve the same helper through `CURSOR_PLUGIN_ROOT`,
+`PLUGIN_ROOT`, or `~/.cursor/plugins/local/sol-advisor`. `configure` and `apply`
+currently write only Codex-owned Advisor state.
 ZCode configuration remains in its plugin record. `doctor` is read-only and reports
 capability gates independently. `remove --host codex` is the explicit pre-uninstall
 cleanup and refuses any state it cannot prove Advisor owns.
@@ -102,9 +168,9 @@ find . -name '*.json' -not -path './.git/*' -exec jq empty {} \;
 git diff --check
 ```
 
-Release 0.9.2 only after source checks pass from fresh
+Release 0.9.3 only after source checks pass from fresh
 `origin/main`, and clean-profile positive and intentional-denial probes pass for Codex,
 ZCode, and ODW. Publish releases only after candidate acceptance, then repeat install,
-positive route, denial, inspection, and removal from the released artifacts. Cursor,
-Claude Code, and Grok Build remain experimental until their named runtime gates are
-demonstrably closed.
+positive route, denial, inspection, and removal from the released artifacts. Cursor
+ships a first-class plugin and CLI install with refuse-to-delegate diagnostics until
+its named runtime gates are closed. Claude Code and Grok Build remain experimental.
