@@ -4,6 +4,14 @@ set -eu
 pass() { printf '%s\n' "PASS: $*"; }
 fail() { printf '%s\n' "FAIL: $*" >&2; exit 1; }
 must_fail() { label=$1; shift; if "$@" >/dev/null 2>&1; then fail "$label unexpectedly succeeded"; fi; }
+# GNU coreutils first: `stat -f` is --file-system, not BSD format.
+file_mode() {
+  if stat -c %a "$1" >/dev/null 2>&1; then
+    stat -c %a "$1"
+  else
+    stat -f %Lp "$1"
+  fi
+}
 
 script_dir=$(CDPATH= cd "$(dirname "$0")" && pwd) || exit 1
 plugin_dir=$(CDPATH= cd "$script_dir/.." && pwd) || exit 1
@@ -22,7 +30,7 @@ trap cleanup 0 HUP INT TERM
 default_target=$tmp/default-agents
 ADVISOR_CONFIG_HOME=$tmp/default-config ADVISOR_AGENT_DIR=$default_target sh "$installer" >/dev/null
 role=$default_target/advisor-grunt.toml
-[ -f "$role" ] && [ "$(stat -f %Lp "$role" 2>/dev/null || stat -c %a "$role")" = 600 ] || fail "default role is missing or not mode 600"
+[ -f "$role" ] && [ "$(file_mode "$role")" = 600 ] || fail "default role is missing or not mode 600"
 grep -Fq 'name = "advisor_grunt"' "$role" && grep -Fq 'model = "gpt-5.6-luna"' "$role" && grep -Fq 'model_reasoning_effort = "high"' "$role" || fail "default role tuple is wrong"
 ADVISOR_CONFIG_HOME=$tmp/default-config ADVISOR_AGENT_DIR=$default_target sh "$installer" --check >/dev/null || fail "default role check failed"
 
@@ -92,7 +100,7 @@ startup() {
 }
 startup "$root_a" startup
 snapshot_a=$config/sessions/$root_a.json
-[ -f "$snapshot_a" ] && [ "$(stat -f %Lp "$snapshot_a" 2>/dev/null || stat -c %a "$snapshot_a")" = 600 ] || fail "SessionStart did not write a private snapshot"
+[ -f "$snapshot_a" ] && [ "$(file_mode "$snapshot_a")" = 600 ] || fail "SessionStart did not write a private snapshot"
 jq -e '.policy == {advisorModel:"gpt-5.6-sol",advisorEffort:"ultra",gruntModel:"gpt-5.6-luna",gruntEffort:"high"}' "$snapshot_a" >/dev/null || fail "default session policy is wrong"
 snapshot_hash=$(shasum -a 256 "$snapshot_a")
 ADVISOR_CONFIG_HOME=$config ADVISOR_MODEL_CATALOG=$runtime_catalog sh "$advisor" configure --host codex \

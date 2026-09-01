@@ -14,7 +14,7 @@ product name is Advisor.
 |---|---|---|---|
 | Codex CLI / ChatGPT Codex app | custom `advisor_grunt` plus rollout inspection | Codex executor plus rollout inspection | strict after hook trust and live runtime acceptance |
 | ZCode | persisted `main` / `lite` policy plus runtime attestation | ZCode executor plus runtime attestation | strict on the maintained fork after live runtime acceptance |
-| Cursor | disabled | disabled | experimental detection; strict delegation disabled |
+| Cursor IDE / Cursor CLI (`agent`) | disabled | disabled | first-class plugin, commands, CLI install, and doctor; strict delegation refused until runtime evidence can prove role, model, effort, parent, and completion |
 | Claude Code | disabled | disabled | experimental detection; strict delegation disabled |
 | Grok Build | disabled | disabled | experimental detection; strict delegation disabled because hook failures are fail-open |
 | Grok Bot | excluded | excluded | excluded |
@@ -78,12 +78,81 @@ Advisor delegation is foreground-only so the parent hook can verify the complete
 child before accepting its result. Advisor never rewrites ZCode provider credentials
 or host-owned model settings.
 
-### Cursor, Claude Code, and Grok Build
+### Cursor IDE and Cursor CLI (`agent`)
 
-Install this repository through the host's plugin marketplace and invoke its installed
-`advisor` skill. These packages intentionally provide guidance and diagnostics only.
-Their current runtimes cannot prove the identical strict contract, so Advisor refuses
-delegation instead of treating requested settings as runtime evidence.
+Install the repository as a Cursor plugin. The package coordinate stays
+`sol-advisor@sol-advisor`. Plugin installation does not add an `advisor`
+executable to your shell `PATH`; `/advisor` and the packaged helper are the
+entrypoints.
+
+**Local plugin (IDE + CLI, no Customize required for CLI):**
+
+```sh
+git clone https://github.com/atebites-hub/sol-advisor.git
+cd sol-advisor
+sh plugins/sol-advisor/scripts/install-cursor.sh
+```
+
+That symlinks this checkout to `~/.cursor/plugins/local/sol-advisor` and mirrors
+the `advisor` and `orchestration` skills into `~/.cursor/skills` so Cursor CLI
+can load them even when plugin skills are invisible. Restart Cursor, or for a
+one-shot CLI session:
+
+```sh
+agent --plugin-dir "$HOME/.cursor/plugins/local/sol-advisor"
+```
+
+From a checkout without installing locally:
+
+```sh
+agent --plugin-dir /path/to/sol-advisor
+```
+
+Team marketplace installs use `.cursor-plugin/marketplace.json` (official Cursor
+schema: plugin entries are only `name`, `source`, `description`, and optional
+`minClientVersions`).
+
+In the IDE, invoke `/advisor` or the `advisor` skill. In the CLI:
+
+```text
+/advisor
+/advisor doctor --host cursor --json
+```
+
+Or run the packaged helper directly:
+
+```sh
+sh "$HOME/.cursor/plugins/local/sol-advisor/plugins/sol-advisor/bin/advisor" doctor --host cursor --json
+```
+
+`doctor --host cursor` is read-only. It detects `cursor-agent`, Cursor CLI
+`agent`, `CURSOR_PLUGIN_ROOT`, `PLUGIN_ROOT`, and `ODW_HOST=cursor`, and it
+lists the exact native and ODW evidence gaps. It never treats settings,
+`--model`, or hook `model_params` as runtime proof.
+
+Advisor does not ship MCP. If you also install Open Dynamic Workflows, inspect
+it separately:
+
+```sh
+agent mcp list
+agent mcp list-tools open-dynamic-workflows
+```
+
+Start a fresh Agent session after install. `sessionStart` injects the
+orchestration contract as additional context in the IDE and in CLI plugin
+sessions. Stay in `solo`. Strict native and ODW delegation on Cursor remain
+disabled: child Task hooks omit grunt effort, Cursor hook failures are
+fail-open, plugin agents cannot pin model/effort, and the ODW `cursor`
+executor's print-mode result does not attest observed model, effort, role, or
+parent. Do not enable fail-open delegation.
+
+### Claude Code and Grok Build
+
+Install this repository through the host's plugin marketplace and invoke its
+installed `advisor` skill. These packages intentionally provide guidance and
+diagnostics only. Their current runtimes cannot prove the identical strict
+contract, so Advisor refuses delegation instead of treating requested settings
+as runtime evidence.
 
 ## Open Dynamic Workflows
 
@@ -91,7 +160,9 @@ With `open-dynamic-workflows` 0.3.0 installed, Advisor may choose ODW for scaled
 rerunnable work. It passes one immutable `{executor, model, reasoningEffort}` policy,
 rejects node conflicts before launch, and accepts only fresh completed traces whose
 host runtime evidence matches that policy. Codex and ZCode are the supported ODW hosts;
-experimental hosts are rejected. Ordinary work stays on the native path.
+Cursor is detected and diagnosed, then refused until its executor can prove the same
+contract. Claude Code and Grok Build remain experimental hosts and are rejected.
+Ordinary work stays on the native path.
 
 The policy fingerprint is correlation evidence, not proof by itself. The primary
 advisor still inspects the real output, reruns verification, and renders the verdict.

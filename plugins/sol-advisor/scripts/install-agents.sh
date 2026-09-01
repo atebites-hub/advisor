@@ -13,7 +13,14 @@ fail() { printf '%s\n' "ERROR: $*" >&2; exit 1; }
 report_preflight_error() { printf '%s\n' "ERROR: $*" >&2; preflight_failed=1; }
 path_exists() { [ -e "$1" ] || [ -L "$1" ]; }
 sha256_file() { shasum -a 256 "$1" 2>/dev/null | awk 'NF >= 1 && length($1) == 64 { print $1; exit }'; }
-file_mode() { stat -f %Lp "$1" 2>/dev/null || stat -c %a "$1" 2>/dev/null; }
+# GNU coreutils first: `stat -f` is --file-system, not BSD format.
+file_mode() {
+  if stat -c %a "$1" >/dev/null 2>&1; then
+    stat -c %a "$1"
+  else
+    stat -f %Lp "$1"
+  fi
+}
 valid_model() { printf '%s\n' "$1" | LC_ALL=C grep -Eq '^[A-Za-z0-9][A-Za-z0-9._:+/-]{0,255}$'; }
 valid_effort() { printf '%s\n' "$1" | LC_ALL=C grep -Eq '^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$'; }
 

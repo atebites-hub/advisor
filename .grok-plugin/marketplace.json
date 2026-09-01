@@ -5,7 +5,7 @@
   "plugins": [
     {
       "name": "sol-advisor",
-      "version": "0.9.2",
+      "version": "0.9.3",
       "description": "Experimental Grok Build detection; strict delegation disabled.",
       "category": "developer-tools",
       "source": {"type": "local", "path": "."},

@@ -1,6 +1,6 @@
 {
   "name": "sol-advisor",
-  "version": "0.9.2",
+  "version": "0.9.3",
   "description": "Configurable advisor/grunt routing with strict Codex and ZCode runtime evidence.",
   "author": {"name": "Daniel McAteer", "url": "https://github.com/DannyMac180"},
   "homepage": "https://github.com/atebites-hub/sol-advisor#readme",
@@ -11,7 +11,7 @@
   "interface": {
     "displayName": "Advisor",
     "shortDescription": "Keep judgment primary; prove every configured grunt route.",
-    "longDescription": "Advisor automatically activates in fresh Codex tasks, snapshots the configured advisor/grunt policy, verifies the primary runtime before delegation, permits only the generated bounded grunt role, and requires post-result rollout evidence. A mismatched primary keeps ordinary solo tools available while strict delegation stays disabled. Solo is the default; delegate uses one proven grunt when useful; audit keeps the verdict primary. Open Dynamic Workflows 0.3.0 is optional for scaled or rerunnable Codex and ZCode work and requires one immutable route plus authoritative host evidence. Cursor, Claude Code, and Grok Build are packaged as experimental diagnostics with strict delegation disabled.",
+    "longDescription": "Advisor automatically activates in fresh Codex tasks, snapshots the configured advisor/grunt policy, verifies the primary runtime before delegation, permits only the generated bounded grunt role, and requires post-result rollout evidence. A mismatched primary keeps ordinary solo tools available while strict delegation stays disabled. Solo is the default; delegate uses one proven grunt when useful; audit keeps the verdict primary. Open Dynamic Workflows 0.3.0 is optional for scaled or rerunnable Codex and ZCode work and requires one immutable route plus authoritative host evidence. Cursor IDE and Cursor CLI ship a first-class plugin, commands, and doctor, but native and ODW delegation stay disabled until Cursor runtime evidence can prove role, model, effort, parent, and completion. Claude Code and Grok Build remain experimental diagnostics with strict delegation disabled.",
     "developerName": "Daniel McAteer",
     "category": "Productivity",
     "capabilities": ["Interactive", "Write", "Lifecycle hooks"],

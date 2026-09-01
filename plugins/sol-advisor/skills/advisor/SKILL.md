@@ -10,8 +10,11 @@ arguments the user requested. Show the helper's exact result. Never claim plugin
 installation exports an `advisor` command to the user's shell.
 
 Codex exposes this skill as `$advisor`; ZCode exposes the qualified
-`$sol-advisor:advisor`. Other packaged hosts use their installed-skill picker, but
-their current doctor status intentionally disables strict delegation.
+`$sol-advisor:advisor`. Cursor IDE and Cursor CLI expose `/advisor` plus this
+skill. Resolve the helper from `CURSOR_PLUGIN_ROOT`, `PLUGIN_ROOT`,
+`~/.cursor/plugins/local/sol-advisor/plugins/sol-advisor/bin/advisor`, or
+`../../bin/advisor`. Cursor doctor is first-class and still disables strict
+delegation until runtime evidence matches the contract.
 
 Supported commands:
 

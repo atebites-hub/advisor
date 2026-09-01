@@ -33,6 +33,9 @@ workflow({
 Every model node omits `executor`, `model`, and `reasoningEffort` so ODW fills them from
 the immutable run policy. Explicit route fields must match exactly; mixed executors,
 raw alternate agents, resume/cache, Cursor, Claude Code, and Grok Build are invalid.
+Cursor may be the ODW host process (`ODW_HOST=cursor`) without becoming an accepted
+Advisor ODW executor: run `doctor --host cursor` and keep the inspector on
+`--host codex` or `--host zcode` only.
 Nested workflows inherit the same policy.
 
 Each worker prompt uses the packet in `role-contracts.md`, including exact ownership,

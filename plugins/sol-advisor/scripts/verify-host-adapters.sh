@@ -19,15 +19,15 @@ cleanup() { case "$tmp" in "$tmp_base"/advisor-host-verify.*) rm -rf "$tmp" ;; e
 trap cleanup 0 HUP INT TERM
 
 jq -e '
-  .name == "sol-advisor" and .version == "0.9.2" and .skills == "./plugins/sol-advisor/skills" and .hooks == "./plugins/sol-advisor/hosts/zcode/hooks/hooks.json" and
+  .name == "sol-advisor" and .version == "0.9.3" and .skills == "./plugins/sol-advisor/skills" and .hooks == "./plugins/sol-advisor/hosts/zcode/hooks/hooks.json" and
   (.userConfig | keys == ["advisor_effort","advisor_model","grunt_effort","grunt_model"]) and
   all(.userConfig[]; .type == "string" and .required == true and .sensitive == false)
 ' "$repo_dir/.zcode-plugin/plugin.json" >/dev/null || fail "ZCode manifest settings or hook path are invalid"
 jq -e '
-  .version == "0.9.2" and .skills == "./plugins/sol-advisor/skills" and (has("agents") | not) and (has("hooks") | not) and (has("mcpServers") | not) and
+  .version == "0.9.3" and .skills == "./plugins/sol-advisor/skills" and (has("agents") | not) and (has("hooks") | not) and (has("mcpServers") | not) and
   (.description | test("experimental detection; strict delegation disabled"; "i"))
-' "$repo_dir/.grok-plugin/plugin.json" "$repo_dir/.cursor-plugin/plugin.json" "$repo_dir/.claude-plugin/plugin.json" >/dev/null || fail "experimental host manifests imply strict delegation"
-jq empty "$repo_dir/marketplace.json" "$repo_dir/.grok-plugin/marketplace.json" "$repo_dir/.cursor-plugin/marketplace.json" "$repo_dir/.claude-plugin/marketplace.json" >/dev/null
+' "$repo_dir/.grok-plugin/plugin.json" "$repo_dir/.claude-plugin/plugin.json" >/dev/null || fail "experimental host manifests imply strict delegation"
+jq empty "$repo_dir/marketplace.json" "$repo_dir/.grok-plugin/marketplace.json" "$repo_dir/.claude-plugin/marketplace.json" >/dev/null
 pass "ZCode strict manifest and content-only experimental host manifests"
 
 config=$tmp/zcode-config.json
@@ -176,7 +176,10 @@ pass "standalone ZCode ODW attestation and cross-mode rejection"
 for host_code in 'cursor runtime_effort_attestation_unavailable' 'claude runtime_effort_attestation_unavailable' 'grok hook_failure_is_fail_open'; do
   set -- $host_code
   output=$(ADVISOR_CONFIG_HOME=$tmp/doctor sh "$advisor" doctor --host "$1" --json || true)
-  printf '%s\n' "$output" | jq -e --arg host "$1" --arg code "$2" '.host == $host and .strict == false and .code == $code and .nativeLane == "disabled" and .odwLane == "disabled"' >/dev/null || fail "$1 doctor overclaimed support"
+  printf '%s\n' "$output" | jq -e --arg host "$1" --arg code "$2" '
+    .host == $host and .strict == false and .code == $code and .nativeLane == "disabled" and .odwLane == "disabled" and
+    (if $host == "cursor" then has("diagnostics") and .diagnostics.enforcementHook == false else (has("diagnostics") | not) end)
+  ' >/dev/null || fail "$1 doctor overclaimed support"
 done
 must_fail "Grok Bot exclusion" env ADVISOR_CONFIG_HOME=$tmp/doctor sh "$advisor" doctor --host grok-bot --json
 pass "truthful experimental and excluded host status"

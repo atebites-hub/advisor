@@ -54,8 +54,9 @@ Use only the host's configured grunt route, without per-spawn model or effort
 overrides. On Codex, preflight the generated `advisor_grunt` role and spawn it with
 `fork_turns=none`. On ZCode, use the native Agent path; the runtime must inherit the
 parent's persisted `lite` tuple, and keep it foreground so the parent hook can attest
-completion. Do not delegate on Cursor, Claude Code, or Grok Build while their doctor
-status says strict delegation is disabled.
+completion. On Cursor IDE and Cursor CLI, stay solo while `doctor --host cursor`
+reports `strict: false`. Do not delegate on Claude Code or Grok Build while their
+doctor status says strict delegation is disabled.
 
 Every packet contains OBJECTIVE, FILES AND OWNERSHIP, INTERFACES, CONSTRAINTS,
 VERIFICATION, RETURN, and IMPLEMENTATION REPORT. Treat the grunt's report as a claim:
