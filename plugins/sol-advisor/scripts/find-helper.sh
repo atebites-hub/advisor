@@ -14,7 +14,8 @@ emit_if_helper() {
   [ -n "$candidate" ] || return 1
   case "$candidate" in /*) ;; *) return 1 ;; esac
   if is_helper "$candidate"; then
-    printf '%s\n' "$candidate"
+    helper_dir=$(CDPATH= cd "$(dirname "$candidate")" && pwd) || return 1
+    printf '%s\n' "$helper_dir/$(basename "$candidate")"
     return 0
   fi
   return 1
