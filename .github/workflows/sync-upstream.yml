@@ -11,12 +11,12 @@ permissions:
   pull-requests: write
 
 concurrency:
-  group: sol-advisor-sync-upstream
+  group: advisor-sync-upstream
   cancel-in-progress: false
 
 jobs:
   sync:
-    if: github.repository == 'atebites-hub/sol-advisor'
+    if: github.repository == 'atebites-hub/advisor'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:

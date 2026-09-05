@@ -1,8 +1,19 @@
 # Open Dynamic Workflows contract
 
-Use ODW only for scaled fanout or rerunnable orchestration. It remains inside
-`delegate` or `audit`; the advisor owns workflow design, judgment, verification, final
-review, and acceptance.
+ODW is **not** the default orchestrator. Prefer the host native path first:
+
+| Host | Native path |
+|---|---|
+| Claude Code | ultracode, or the built-in advisor / Opus plan |
+| ChatGPT / Codex | ultra mode |
+| Cursor | multitask (still needs a better live investigation) |
+| ZCode | native Agent with persisted `lite` attestation |
+
+Use ODW only for scaled fanout, rerunnable orchestration, or multi-executor
+work those natives do not cover. It remains inside `delegate` or `audit`; the
+advisor owns workflow design, judgment, verification, final review, and
+acceptance. Claude, Cursor, and Grok stay rejected ODW executors even when
+the ODW plugin is installed.
 
 ## Preflight
 

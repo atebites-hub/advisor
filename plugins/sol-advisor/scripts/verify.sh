@@ -10,6 +10,7 @@ repo_dir=$(CDPATH= cd "$plugin_dir/../.." && pwd) || exit 1
 
 required_files='
 README.md
+UPSTREAM.md
 .agents/plugins/marketplace.json
 .cursor-plugin/marketplace.json
 .cursor-plugin/plugin.json
@@ -192,6 +193,40 @@ grep -Fq '~/.cursor/plugins/local/sol-advisor' "$repo_dir/README.md" || fail "RE
 grep -Fq 'agent --plugin-dir' "$repo_dir/README.md" || fail "README omits Cursor CLI --plugin-dir"
 grep -Fq 'agent mcp' "$repo_dir/README.md" || fail "README omits agent mcp"
 grep -Fq '~/.cursor/skills' "$repo_dir/README.md" || fail "README omits Cursor CLI skills fallback"
+grep -Fq 'marketplace add atebites-hub/advisor' "$repo_dir/README.md" || fail "README marketplace add is not atebites-hub/advisor"
+grep -Fq 'sol-advisor@sol-advisor' "$repo_dir/README.md" || fail "README omits the upgrade-compatible package coordinate"
+grep -Fq 'catalog-backed' "$repo_dir/README.md" || fail "README omits catalog-backed advisor/grunt pairs"
+grep -Fq 'preset' "$repo_dir/README.md" || fail "README does not frame Sol/Luna as a Codex preset"
+grep -Fq 'ultracode' "$repo_dir/README.md" && grep -Fq 'ultra mode' "$repo_dir/README.md" && grep -Fq 'multitask' "$repo_dir/README.md" ||
+  fail "README omits the native-first orchestrator names"
+grep -Fq 'Native-first vs ODW' "$repo_dir/README.md" || fail "README omits the native-first vs ODW matrix"
+grep -Fq 'native_advisor_unverified' "$repo_dir/README.md" || fail "README omits Claude doctor code"
+grep -Fq 'Antigravity' "$repo_dir/README.md" && grep -Fq 'Copilot' "$repo_dir/README.md" && grep -Fq 'Lane B' "$repo_dir/README.md" ||
+  fail "README omits Antigravity/Copilot deferred gaps"
+if rg -n '^\| *Antigravity|^\| *GitHub Copilot|^\| *Copilot' "$repo_dir/README.md"; then
+  fail "Antigravity/Copilot must not appear as support-table host rows"
+fi
+grep -Fq 'https://github.com/atebites-hub/advisor.git' "$repo_dir/UPSTREAM.md" || fail "UPSTREAM.md origin is not atebites-hub/advisor"
+grep -Fq 'DannyMac180/sol-advisor' "$repo_dir/UPSTREAM.md" || fail "UPSTREAM.md dropped the true-fork parent"
+grep -Fq "github.repository == 'atebites-hub/advisor'" "$repo_dir/.github/workflows/sync-upstream.yml" ||
+  fail "sync-upstream.yml is not gated on atebites-hub/advisor"
+grep -Fq "github.repository == 'atebites-hub/advisor'" "$repo_dir/.github/workflows/cleanup-artifacts.yml" ||
+  fail "cleanup-artifacts.yml is not gated on atebites-hub/advisor"
+if rg -n 'github.com/atebites-hub/sol-advisor' \
+  "$repo_dir/marketplace.json" \
+  "$repo_dir/.cursor-plugin" \
+  "$repo_dir/.claude-plugin" \
+  "$repo_dir/.grok-plugin" \
+  "$plugin_dir/.codex-plugin"; then
+  fail "active plugin catalogs still point at the pre-rename GitHub slug"
+fi
+grep -Fq 'catalog-backed advisor/grunt pair' "$plugin_dir/bin/advisor" || fail "advisor helper usage omits catalog-backed pairs"
+grep -Fq 'defer_to_native_when_present' "$plugin_dir/bin/advisor" || fail "advisor helper omits Claude native-first seating"
+grep -Fq 'Antigravity' "$plugin_dir/skills/orchestration/references/operations.md" &&
+  grep -Fq 'Copilot' "$plugin_dir/skills/orchestration/references/operations.md" ||
+  fail "operations.md omits Antigravity/Copilot deferred gaps"
+grep -Fq 'ultracode' "$plugin_dir/skills/orchestration/references/odw.md" || fail "odw.md omits native-first Claude path"
+grep -Fq 'native_advisor_unverified' "$plugin_dir/skills/advisor/SKILL.md" || fail "advisor skill omits Claude doctor code"
 grep -Fq 'version 0.3.0' "$plugin_dir/skills/orchestration/references/odw.md" || fail "ODW compatibility version is missing"
 for section in OBJECTIVE 'FILES AND OWNERSHIP' INTERFACES CONSTRAINTS VERIFICATION RETURN 'IMPLEMENTATION REPORT'; do
   grep -Fq "$section" "$plugin_dir/skills/orchestration/references/role-contracts.md" || fail "grunt packet omits $section"

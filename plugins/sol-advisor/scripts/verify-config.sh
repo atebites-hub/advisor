@@ -111,7 +111,7 @@ jq -e '.code == "model_capability_unverified" and .strict == false' "$tmp_dir/un
   fail "unverified doctor result used the wrong machine code"
 pass "catalog-backed rejection and unverified capability gate"
 
-for host_code in 'cursor runtime_effort_attestation_unavailable' 'claude runtime_effort_attestation_unavailable' 'grok hook_failure_is_fail_open'; do
+for host_code in 'cursor runtime_effort_attestation_unavailable' 'claude native_advisor_unverified' 'grok hook_failure_is_fail_open'; do
   set -- $host_code
   if run_advisor doctor --host "$1" --json > "$tmp_dir/$1.json"; then
     fail "$1 doctor unexpectedly reported strict support"
@@ -121,7 +121,14 @@ for host_code in 'cursor runtime_effort_attestation_unavailable' 'claude runtime
 done
 jq -e '.diagnostics.enforcementHook == false and (.diagnostics.nativeGaps | type == "array") and (.diagnostics.odwGaps | type == "array")' \
   "$tmp_dir/cursor.json" >/dev/null || fail "Cursor doctor omitted first-class diagnostics"
-jq -e 'has("diagnostics") | not' "$tmp_dir/claude.json" >/dev/null || fail "Claude doctor gained a Cursor diagnostics object"
+jq -e '
+  .diagnostics.seating == "defer_to_native_when_present" and
+  .diagnostics.nativeAdvisor == "unverified" and
+  .diagnostics.nativeOrchestrator == "ultracode" and
+  .diagnostics.pluginStrict == false and
+  .diagnostics.odwDefault == false and
+  .odwLane == "disabled" and .nativeLane == "disabled"
+' "$tmp_dir/claude.json" >/dev/null || fail "Claude doctor omitted native-first diagnostics"
 if run_advisor doctor --host grok-bot --json >/dev/null 2>&1; then fail "Grok Bot was not excluded"; fi
 pass "truthful Cursor Claude Grok and Grok Bot capability status"
 

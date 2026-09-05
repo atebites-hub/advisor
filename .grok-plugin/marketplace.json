@@ -1,7 +1,7 @@
 {
   "name": "sol-advisor",
   "description": "Advisor guidance and truthful host capability diagnostics.",
-  "owner": {"name": "atebites-hub", "url": "https://github.com/atebites-hub/sol-advisor"},
+  "owner": {"name": "atebites-hub", "url": "https://github.com/atebites-hub/advisor"},
   "plugins": [
     {
       "name": "sol-advisor",

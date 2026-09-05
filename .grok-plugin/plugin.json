@@ -2,9 +2,9 @@
   "name": "sol-advisor",
   "version": "0.9.3",
   "description": "Advisor guidance for Grok Build: experimental detection; strict delegation disabled because hook failures are fail-open.",
-  "author": {"name": "atebites-hub", "url": "https://github.com/atebites-hub/sol-advisor"},
-  "homepage": "https://github.com/atebites-hub/sol-advisor",
-  "repository": "https://github.com/atebites-hub/sol-advisor",
+  "author": {"name": "atebites-hub", "url": "https://github.com/atebites-hub/advisor"},
+  "homepage": "https://github.com/atebites-hub/advisor",
+  "repository": "https://github.com/atebites-hub/advisor",
   "license": "MIT",
   "keywords": ["advisor", "routing", "grok", "diagnostics"],
   "skills": "./plugins/sol-advisor/skills"
