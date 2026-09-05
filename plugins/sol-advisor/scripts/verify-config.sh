@@ -88,6 +88,8 @@ printf '%s\n' "$doctor_json" | jq -e '
   .checks.generatedFiles.current == false and
   .checks.hooks == {configured:true,trustObservable:false,trusted:false} and
   .checks.odwPlugin.requiredVersion == "0.3.0" and (.checks.odwPlugin.compatible | type == "boolean") and
+  .checks.odwPlugin.pluginId == "open-dynamic-workflows@open-dynamic-workflows" and
+  .checks.odwPlugin.installHint == "install/enable open-dynamic-workflows@0.3.0" and
   .checks.runtimeAttestation == {required:true,observed:false}
 ' >/dev/null || fail "doctor JSON is not the allowlisted schema"
 pass "doctor is read-only and reports independently validated tuples"

@@ -19,8 +19,8 @@ delegation until runtime evidence matches the contract.
 Supported commands:
 
 ```text
-configure --host codex --advisor-model MODEL --advisor-effort EFFORT --grunt-model MODEL --grunt-effort EFFORT
-apply --host codex
+configure --host codex|zcode --advisor-model MODEL --advisor-effort EFFORT --grunt-model MODEL --grunt-effort EFFORT
+apply --host codex|zcode
 doctor --host codex|zcode|grok|cursor|claude [--json]
 remove --host codex
 ```
@@ -28,9 +28,16 @@ remove --host codex
 `configure` accepts any catalog-backed advisor/grunt pair. When a local Codex
 model catalog is present, both tuples must exist there; when it is absent,
 configure still writes the pair and `doctor` reports
-`model_capability_unverified`. The Codex built-in default (used when no
-profile exists) is the Sol / Ultra + Luna / High preset only—not the product
-identity.
+`model_capability_unverified`. `apply --host zcode` writes factory-sane
+plugin settings into `~/.zcode/cli/config.json` (or `ZCODE_CONFIG`) so
+doctor can get past `plugin_settings_required`. The Codex/ZCode factory
+preset is Sol / Ultra + Luna / High only—not the product identity.
+
+`doctor` reports `odwPlugin.compatible=true` only when
+`open-dynamic-workflows@open-dynamic-workflows` is installed+enabled at
+version 0.3.0 on that Codex or ZCode host. If `compatible` is false,
+install/enable `open-dynamic-workflows@0.3.0`; marketplace `package.json`
+at 0.3.0 is not enough.
 
 On Claude, prefer ultracode or the built-in advisor / Opus plan when that
 is the right tool. `doctor --host claude` reports

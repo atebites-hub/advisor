@@ -47,7 +47,59 @@ incomplete=$tmp/incomplete.json
 jq '.plugins.options["sol-advisor@sol-advisor"] |= del(.grunt_effort)' "$config" > "$incomplete"
 incomplete_doctor=$(HOME=$tmp ZCODE_CONFIG=$incomplete sh "$advisor" doctor --host zcode --json || true)
 printf '%s\n' "$incomplete_doctor" | jq -e '.code == "plugin_settings_required" and .strict == false' >/dev/null || fail "incomplete ZCode settings were accepted"
+empty=$tmp/empty-settings.json
+jq '.plugins.options["sol-advisor@sol-advisor"]={advisor_model:"",advisor_effort:"",grunt_model:"",grunt_effort:""}' "$config" > "$empty"
+empty_doctor=$(HOME=$tmp ZCODE_CONFIG=$empty sh "$advisor" doctor --host zcode --json || true)
+printf '%s\n' "$empty_doctor" | jq -e '.code == "plugin_settings_required" and .strict == false' >/dev/null || fail "empty ZCode settings were accepted"
+empty_err=$tmp/empty-doctor.err
+HOME=$tmp ZCODE_CONFIG=$empty sh "$advisor" doctor --host zcode --json >"$tmp/empty-doctor.json" 2>"$empty_err" || true
+grep -Fq 'install/enable open-dynamic-workflows@0.3.0' "$empty_err" || fail "ZCode doctor omitted the ODW install/enable hint"
 pass "ZCode settings discovery is read-only and incomplete settings disable strict mode"
+
+catalog=$tmp/models.json
+jq -n '{models:[
+  {slug:"gpt-5.6-sol",supported_reasoning_levels:[{effort:"ultra"}]},
+  {slug:"gpt-5.6-luna",supported_reasoning_levels:[{effort:"high"}]},
+  {slug:"zai/advisor",supported_reasoning_levels:[{effort:"high"}]},
+  {slug:"zai/grunt",supported_reasoning_levels:[{effort:"low"}]}
+]}' > "$catalog"
+apply_empty=$(HOME=$tmp ZCODE_CONFIG=$empty ADVISOR_MODEL_CATALOG=$catalog sh "$advisor" apply --host zcode)
+printf '%s\n' "$apply_empty" | grep -Fq "WROTE: $empty" || fail "ZCode apply did not report the written config"
+jq -e '
+  .model.main == "host/original" and .provider.keep.apiKey == "not-read-by-advisor" and
+  .plugins.enabled == true and .plugins.enabledPlugins["sol-advisor@sol-advisor"] == true and
+  .plugins.options["sol-advisor@sol-advisor"] == {advisor_model:"gpt-5.6-sol",advisor_effort:"ultra",grunt_model:"gpt-5.6-luna",grunt_effort:"high"}
+' "$empty" >/dev/null || fail "ZCode apply did not write the factory preset or mutated host settings"
+applied_doctor=$(HOME=$tmp ZCODE_CONFIG=$empty ADVISOR_MODEL_CATALOG=$catalog sh "$advisor" doctor --host zcode --json || true)
+printf '%s\n' "$applied_doctor" | jq -e '
+  .code == "runtime_attestation_required" and .profileValid == true and .strict == false and
+  .advisor.model == "gpt-5.6-sol" and .advisor.effort == "ultra" and
+  .grunt.model == "gpt-5.6-luna" and .grunt.effort == "high" and
+  .checks.odwPlugin.installHint == "install/enable open-dynamic-workflows@0.3.0"
+' >/dev/null || fail "ZCode apply did not get doctor past plugin_settings_required"
+created=$tmp/created/cli/config.json
+HOME=$tmp ZCODE_CONFIG=$created ADVISOR_MODEL_CATALOG=$catalog sh "$advisor" apply --host zcode >/dev/null
+jq -e '.plugins.options["sol-advisor@sol-advisor"].advisor_model == "gpt-5.6-sol"' "$created" >/dev/null ||
+  fail "ZCode apply did not create missing plugin settings"
+configure_out=$(HOME=$tmp ZCODE_CONFIG=$config ADVISOR_MODEL_CATALOG=$catalog sh "$advisor" configure --host zcode \
+  --advisor-model zai/advisor --advisor-effort high --grunt-model zai/grunt --grunt-effort low)
+printf '%s\n' "$configure_out" | grep -Fq "WROTE: $config" || fail "ZCode configure did not report the written config"
+jq -e '
+  .model.main == "host/original" and .provider.keep.apiKey == "not-read-by-advisor" and
+  .plugins.options["sol-advisor@sol-advisor"] == {advisor_model:"zai/advisor",advisor_effort:"high",grunt_model:"zai/grunt",grunt_effort:"low"}
+' "$config" >/dev/null || fail "ZCode configure overwrote host settings or wrote the wrong tuple"
+reapply=$(HOME=$tmp ZCODE_CONFIG=$config ADVISOR_MODEL_CATALOG=$catalog sh "$advisor" apply --host zcode)
+printf '%s\n' "$reapply" | grep -Fq "WROTE: $config" || fail "ZCode apply after configure did not report the config"
+jq -e '.plugins.options["sol-advisor@sol-advisor"].advisor_model == "zai/advisor" and .plugins.options["sol-advisor@sol-advisor"].grunt_effort == "low"' \
+  "$config" >/dev/null || fail "ZCode apply overwrote configured tuples with the factory preset"
+must_fail "ZCode configure missing catalog tuple" env HOME=$tmp ZCODE_CONFIG=$tmp/rejected.json ADVISOR_MODEL_CATALOG=$catalog \
+  sh "$advisor" configure --host zcode --advisor-model missing/model --advisor-effort ultra --grunt-model gpt-5.6-luna --grunt-effort high
+[ ! -e "$tmp/rejected.json" ] || fail "rejected ZCode configure left a config"
+symlink_config=$tmp/symlink-config.json
+ln -s "$config" "$symlink_config"
+must_fail "symlinked ZCode apply" env HOME=$tmp ZCODE_CONFIG=$symlink_config ADVISOR_MODEL_CATALOG=$catalog sh "$advisor" apply --host zcode
+must_fail "Cursor still refuses ZCode-only apply on cursor" env ADVISOR_CONFIG_HOME=$tmp/config sh "$advisor" apply --host cursor
+pass "ZCode apply/configure write catalog-backed settings and preserve host credentials"
 
 policy_a=$(jq -cn '{advisorModel:"zai/advisor",advisorEffort:"high",gruntModel:"zai/grunt",gruntEffort:"low"}')
 policy_b=$(jq -cn '{advisorModel:"zai/new-advisor",advisorEffort:"max",gruntModel:"zai/new-grunt",gruntEffort:"medium"}')

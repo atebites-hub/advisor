@@ -37,6 +37,7 @@ plugins/sol-advisor/scripts/verify-codex-adapter.sh
 plugins/sol-advisor/scripts/verify-host-adapters.sh
 plugins/sol-advisor/scripts/verify-cursor-adapter.sh
 plugins/sol-advisor/scripts/verify-odw-inspector.sh
+plugins/sol-advisor/scripts/smoke-odw-one-leaf.sh
 plugins/sol-advisor/scripts/install-cursor.sh
 plugins/sol-advisor/scripts/find-helper.sh
 plugins/sol-advisor/hosts/cursor/hooks/hooks.json
@@ -208,6 +209,15 @@ grep -Fq 'ODW unused' "$repo_dir/README.md" ||
   fail "README omits that unused ODW is not a pass"
 grep -Fq 'unproven' "$repo_dir/README.md" || fail "README omits unproven alignment status"
 grep -Fq 'native_advisor_unverified' "$repo_dir/README.md" || fail "README omits Claude doctor code"
+grep -Fq 'apply --host zcode' "$repo_dir/README.md" || fail "README omits ZCode apply"
+grep -Fq 'configure --host zcode' "$repo_dir/README.md" || fail "README omits ZCode configure"
+grep -Fq 'plugin_settings_required' "$repo_dir/README.md" || fail "README omits ZCode plugin_settings_required"
+grep -Fq 'install/enable open-dynamic-workflows@0.3.0' "$repo_dir/README.md" || fail "README omits ODW install/enable seating gate"
+grep -Fq 'git submodule update --init plugins/open-dynamic-workflows' "$repo_dir/README.md" ||
+  fail "README omits the ODW submodule init command"
+grep -Fq 'git submodule update --init plugins/open-dynamic-workflows' "$script_dir/smoke-odw-one-leaf.sh" ||
+  fail "one-leaf smoke omits the exact submodule init command"
+grep -Fq 'Does not soft-pass' "$script_dir/smoke-odw-one-leaf.sh" || fail "one-leaf smoke omits fail-closed wording"
 grep -Fq 'Antigravity' "$repo_dir/README.md" && grep -Fq 'Copilot' "$repo_dir/README.md" && grep -Fq 'Lane B' "$repo_dir/README.md" ||
   fail "README omits Antigravity/Copilot deferred gaps"
 if rg -n '^\| *Antigravity|^\| *GitHub Copilot|^\| *Copilot' "$repo_dir/README.md"; then
@@ -228,6 +238,8 @@ if rg -n 'github.com/atebites-hub/sol-advisor' \
   fail "active plugin catalogs still point at the pre-rename GitHub slug"
 fi
 grep -Fq 'catalog-backed advisor/grunt pair' "$plugin_dir/bin/advisor" || fail "advisor helper usage omits catalog-backed pairs"
+grep -Fq 'apply --host codex|zcode' "$plugin_dir/bin/advisor" || fail "advisor helper usage omits ZCode apply"
+grep -Fq 'install/enable open-dynamic-workflows@0.3.0' "$plugin_dir/bin/advisor" || fail "advisor helper omits ODW install/enable hint"
 grep -Fq 'defer_to_native_when_present' "$plugin_dir/bin/advisor" || fail "advisor helper omits Claude native-first seating"
 grep -Fq 'nativeAdvisor=unverified' "$plugin_dir/bin/advisor" || fail "advisor helper omits honest Claude nativeAdvisor=unverified"
 grep -Fq 'ODW alignment required' "$plugin_dir/bin/advisor" || fail "advisor helper omits required ODW alignment"
@@ -250,6 +262,10 @@ grep -Fq 'does not' "$plugin_dir/skills/advisor/SKILL.md" &&
 grep -Fq 'ODW unused' "$plugin_dir/skills/orchestration/SKILL.md" ||
   fail "orchestration skill omits that unused ODW is not a pass"
 grep -Fq 'version 0.3.0' "$plugin_dir/skills/orchestration/references/odw.md" || fail "ODW compatibility version is missing"
+grep -Fq 'install/enable open-dynamic-workflows@0.3.0' "$plugin_dir/skills/orchestration/references/odw.md" ||
+  fail "odw.md omits install/enable seating wording"
+grep -Fq 'apply --host zcode' "$plugin_dir/skills/orchestration/references/operations.md" ||
+  fail "operations.md omits ZCode apply"
 for section in OBJECTIVE 'FILES AND OWNERSHIP' INTERFACES CONSTRAINTS VERIFICATION RETURN 'IMPLEMENTATION REPORT'; do
   grep -Fq "$section" "$plugin_dir/skills/orchestration/references/role-contracts.md" || fail "grunt packet omits $section"
 done

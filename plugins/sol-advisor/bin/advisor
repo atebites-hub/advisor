@@ -7,10 +7,13 @@ need() { command -v "$1" >/dev/null 2>&1 || fail "required command is unavailabl
 usage() {
   printf '%s\n' \
     'Usage:' \
-    '  advisor configure --host codex --advisor-model MODEL --advisor-effort EFFORT --grunt-model MODEL --grunt-effort EFFORT' \
-    '  advisor apply --host codex' \
+    '  advisor configure --host codex|zcode --advisor-model MODEL --advisor-effort EFFORT --grunt-model MODEL --grunt-effort EFFORT' \
+    '  advisor apply --host codex|zcode' \
     '  advisor doctor --host codex|zcode|grok|cursor|claude [--json]' \
-    '  configure accepts any catalog-backed advisor/grunt pair. Codex built-in default is the Sol/Ultra + Luna/High preset only.' \
+    '  configure accepts any catalog-backed advisor/grunt pair. Codex and ZCode factory apply use the Sol/Ultra + Luna/High preset only.' \
+    '  ZCode apply/configure write those tuples into plugin settings (`~/.zcode/cli/config.json` or ZCODE_CONFIG). They do not rewrite host model or provider credentials.' \
+    '  doctor reports odwPlugin.compatible=true only when open-dynamic-workflows@open-dynamic-workflows is installed+enabled at version 0.3.0 on that Codex or ZCode host. Marketplace package.json at 0.3.0 is not enough.' \
+    '  If compatible=false, install/enable open-dynamic-workflows@0.3.0 on that host.' \
     '  Cursor CLI is `agent` / `cursor-agent`. Doctor reports gaps; it does not enable delegation.' \
     '  Claude: prefer ultracode / Opus plan when that is the right tool; doctor defers to that native path (`nativeAdvisor=unverified`) and never enables plugin-strict seating.' \
     '  Native-first with ODW alignment required: detect ultracode / Codex ultra / Cursor multitask, do not fight them, compose or explicitly defer. Alignment is unproven; unused ODW is not a pass.' \
@@ -32,6 +35,13 @@ fi
 case "$config_dir" in /*) ;; *) config_dir=$(pwd -P)/$config_dir ;; esac
 case "$config_dir" in /|//) fail "refusing to use the filesystem root as Advisor configuration home." ;; esac
 profile=$config_dir/codex.json
+default_advisor_model=gpt-5.6-sol
+default_advisor_effort=ultra
+default_grunt_model=gpt-5.6-luna
+default_grunt_effort=high
+odw_plugin_id=open-dynamic-workflows@open-dynamic-workflows
+odw_required_version=0.3.0
+odw_install_hint='install/enable open-dynamic-workflows@0.3.0'
 
 path_exists() { [ -e "$1" ] || [ -L "$1" ]; }
 # GNU coreutils first: `stat -f` is --file-system, not BSD format. Trying BSD
@@ -103,6 +113,93 @@ catalog_has_tuple() {
   ' "$candidate" >/dev/null 2>&1
 }
 
+require_catalog_tuples() {
+  catalog=$(catalog_path)
+  if path_exists "$catalog" && ! catalog_is_available "$catalog"; then
+    fail "model catalog exists but is unsafe or invalid: $catalog"
+  fi
+  if catalog_is_available "$catalog"; then
+    catalog_has_tuple "$catalog" "$1" "$2" || fail "advisor tuple is not available in the local model catalog."
+    catalog_has_tuple "$catalog" "$3" "$4" || fail "grunt tuple is not available in the local model catalog."
+  fi
+}
+
+resolve_zcode_config() {
+  if [ -n "${ZCODE_CONFIG-}" ]; then
+    zcode_config=$ZCODE_CONFIG
+  else
+    [ -n "${HOME-}" ] || fail "HOME is unset; set ZCODE_CONFIG."
+    zcode_config=$HOME/.zcode/cli/config.json
+  fi
+  case "$zcode_config" in /*) ;; *) zcode_config=$(pwd -P)/$zcode_config ;; esac
+  case "$zcode_config" in /|//) fail "refusing to use the filesystem root as ZCode config." ;; esac
+}
+
+zcode_four_settings_present() {
+  jq -e '
+    (.plugins.options["sol-advisor@sol-advisor"] | type == "object") and
+    (.plugins.options["sol-advisor@sol-advisor"].advisor_model | type == "string" and length > 0) and
+    (.plugins.options["sol-advisor@sol-advisor"].advisor_effort | type == "string" and length > 0) and
+    (.plugins.options["sol-advisor@sol-advisor"].grunt_model | type == "string" and length > 0) and
+    (.plugins.options["sol-advisor@sol-advisor"].grunt_effort | type == "string" and length > 0)
+  ' "$1" >/dev/null 2>&1
+}
+
+write_zcode_plugin_settings() {
+  advisor_model=$1 advisor_effort=$2 grunt_model=$3 grunt_effort=$4
+  resolve_zcode_config
+  zcode_parent=$(dirname "$zcode_config")
+  if path_exists "$zcode_config"; then
+    [ -f "$zcode_config" ] && [ ! -L "$zcode_config" ] && [ -r "$zcode_config" ] ||
+      fail "ZCode config is unsafe or invalid and will not be replaced: $zcode_config"
+    jq -e 'type == "object"' "$zcode_config" >/dev/null 2>&1 ||
+      fail "ZCode config is not a JSON object and will not be replaced: $zcode_config"
+  elif path_exists "$zcode_parent" && { [ -L "$zcode_parent" ] || [ ! -d "$zcode_parent" ]; }; then
+    fail "ZCode config parent is not a real directory: $zcode_parent"
+  fi
+  mkdir -p "$zcode_parent" || fail "could not create ZCode config directory: $zcode_parent"
+  staged=$(mktemp "$zcode_parent/.zcode-config.XXXXXX") || fail "could not stage ZCode plugin settings"
+  cleanup_zcode_staged() { [ -z "${staged-}" ] || rm -f "$staged"; }
+  trap cleanup_zcode_staged 0 HUP INT TERM
+  if path_exists "$zcode_config"; then
+    jq --arg advisor_model "$advisor_model" --arg advisor_effort "$advisor_effort" \
+      --arg grunt_model "$grunt_model" --arg grunt_effort "$grunt_effort" '
+      if type != "object" then error("invalid") else . end
+      | .plugins = ((.plugins // {}) | if type == "object" then . else error("plugins") end)
+      | .plugins.enabled = true
+      | .plugins.enabledPlugins = ((.plugins.enabledPlugins // {}) | if type == "object" then . else error("enabledPlugins") end)
+      | .plugins.enabledPlugins["sol-advisor@sol-advisor"] = true
+      | .plugins.options = ((.plugins.options // {}) | if type == "object" then . else error("options") end)
+      | .plugins.options["sol-advisor@sol-advisor"] = {
+          advisor_model:$advisor_model,advisor_effort:$advisor_effort,
+          grunt_model:$grunt_model,grunt_effort:$grunt_effort
+        }
+    ' "$zcode_config" > "$staged" || fail "could not merge Advisor settings into ZCode config"
+  else
+    jq -n --arg advisor_model "$advisor_model" --arg advisor_effort "$advisor_effort" \
+      --arg grunt_model "$grunt_model" --arg grunt_effort "$grunt_effort" '
+      {plugins:{enabled:true,enabledPlugins:{"sol-advisor@sol-advisor":true},
+        options:{"sol-advisor@sol-advisor":{
+          advisor_model:$advisor_model,advisor_effort:$advisor_effort,
+          grunt_model:$grunt_model,grunt_effort:$grunt_effort}}}}
+    ' > "$staged" || fail "could not render ZCode plugin settings"
+  fi
+  chmod 600 "$staged" || fail "could not secure staged ZCode config"
+  mv -f "$staged" "$zcode_config" || fail "could not atomically install ZCode plugin settings"
+  staged=
+  trap - 0 HUP INT TERM
+  printf '%s\n' "WROTE: $zcode_config"
+}
+
+odw_list_is_compatible() {
+  jq -e --arg id "$odw_plugin_id" --arg version "$odw_required_version" '
+    def rows:
+      [(.installed[]? | {id:(.pluginId // .id // ""), version:(.version // ""), enabled}),
+       (.installedPlugins[]? | {id:(.pluginId // .id // ""), version:(.version // ""), enabled})];
+    any(rows[]; .id == $id and .version == $version and .enabled == true)
+  ' >/dev/null 2>&1
+}
+
 parse_host_only() {
   parsed_host= parsed_json=0
   while [ "$#" -gt 0 ]; do
@@ -153,7 +250,10 @@ configure() {
       *) fail "unknown or positional argument: $1" ;;
     esac
   done
-  [ "$host" = codex ] || fail "configure currently supports only --host codex."
+  case "$host" in
+    codex|zcode) ;;
+    *) fail "configure currently supports only --host codex or --host zcode." ;;
+  esac
   [ "$seen_advisor_model" -eq 1 ] && [ "$seen_advisor_effort" -eq 1 ] &&
     [ "$seen_grunt_model" -eq 1 ] && [ "$seen_grunt_effort" -eq 1 ] ||
     fail "configure requires both complete advisor and grunt tuples."
@@ -163,17 +263,15 @@ configure() {
   valid_effort "$grunt_effort" || fail "grunt effort contains unsupported characters."
 
   need jq
+  require_catalog_tuples "$advisor_model" "$advisor_effort" "$grunt_model" "$grunt_effort"
+  if [ "$host" = zcode ]; then
+    write_zcode_plugin_settings "$advisor_model" "$advisor_effort" "$grunt_model" "$grunt_effort"
+    printf '%s\n' 'Start a new ZCode session, then run `$advisor doctor --host zcode`.'
+    return 0
+  fi
   validate_config_dir
   if path_exists "$profile" && ! profile_is_valid "$profile"; then
     fail "existing Codex profile is unsafe or invalid and will not be replaced: $profile"
-  fi
-  catalog=$(catalog_path)
-  if path_exists "$catalog" && ! catalog_is_available "$catalog"; then
-    fail "model catalog exists but is unsafe or invalid: $catalog"
-  fi
-  if catalog_is_available "$catalog"; then
-    catalog_has_tuple "$catalog" "$advisor_model" "$advisor_effort" || fail "advisor tuple is not available in the local model catalog."
-    catalog_has_tuple "$catalog" "$grunt_model" "$grunt_effort" || fail "grunt tuple is not available in the local model catalog."
   fi
 
   mkdir -p "$config_dir" || fail "could not create Advisor configuration home: $config_dir"
@@ -257,7 +355,7 @@ resolve_cursor_plugin_root() {
 probe_host() {
   check_cli_present=false check_cli_version= check_files_current=false
   check_hooks_configured=false check_hook_trust_observable=false check_hooks_trusted=false
-  check_odw_version=0.3.0 check_odw_compatible=false
+  check_odw_version=$odw_required_version check_odw_compatible=false
   check_cli_binary= check_cli_kind=none check_plugin_root= check_plugin_root_source=none
   check_cursor_odw_host= check_activation_hook=false check_enforcement_hook=false
   case "$1" in
@@ -292,13 +390,18 @@ probe_host() {
     [ -f "$plugin_dir/hooks/hooks.json" ] && [ -f "$plugin_dir/hooks/enforce-codex.sh" ] && [ -f "$plugin_dir/hooks/session-context.sh" ] && check_hooks_configured=true
     if sh "$installer" --profile "$profile" --check --check-role grunt >/dev/null 2>&1; then check_files_current=true; fi
     if [ "$check_cli_present" = true ] && plugin_list=$(codex plugin list --json 2>/dev/null); then
-      if printf '%s\n' "$plugin_list" | jq -e 'any(.installed[]?; .pluginId == "open-dynamic-workflows@open-dynamic-workflows" and .version == "0.3.0" and .enabled == true)' >/dev/null 2>&1; then
+      if printf '%s\n' "$plugin_list" | odw_list_is_compatible; then
         check_odw_compatible=true
       fi
     fi
   elif [ "$1" = zcode ]; then
     { [ -f "$plugin_dir/.zcode-plugin/plugin.json" ] || [ -f "$plugin_dir/../../.zcode-plugin/plugin.json" ]; } &&
       [ -f "$plugin_dir/hosts/zcode/hooks/hooks.json" ] && [ -f "$plugin_dir/hosts/zcode/hooks/enforce.sh" ] && check_files_current=true
+    if [ "$check_cli_present" = true ] && plugin_list=$(zcode plugins list --json 2>/dev/null); then
+      if printf '%s\n' "$plugin_list" | odw_list_is_compatible; then
+        check_odw_compatible=true
+      fi
+    fi
   elif [ "$1" = cursor ]; then
     [ "${ODW_HOST-}" = cursor ] && check_cursor_odw_host=cursor
     resolve_cursor_plugin_root
@@ -378,17 +481,21 @@ doctor_result() {
     --argjson grunt_observable "$grunt_observable" --argjson grunt_available "$grunt_available" \
     --argjson cli_present "$check_cli_present" --argjson files_current "$check_files_current" \
     --argjson hooks_configured "$check_hooks_configured" --argjson hook_trust_observable "$check_hook_trust_observable" \
-    --argjson hooks_trusted "$check_hooks_trusted" --argjson odw_compatible "$check_odw_compatible" '
+    --argjson hooks_trusted "$check_hooks_trusted" --argjson odw_compatible "$check_odw_compatible" \
+    --arg odw_plugin_id "$odw_plugin_id" --arg odw_install_hint "$odw_install_hint" '
     {schemaVersion:1,host:$host,strict:$strict,code:$code,profileSource:$profile_source,profilePath:$profile_path,
      profileValid:$profile_valid,
      advisor:{model:$advisor_model,effort:$advisor_effort,observable:$advisor_observable,available:$advisor_available},
      grunt:{model:$grunt_model,effort:$grunt_effort,observable:$grunt_observable,available:$grunt_available},
      checks:{hostCli:{present:$cli_present,version:$cli_version},generatedFiles:{current:$files_current},
        hooks:{configured:$hooks_configured,trustObservable:$hook_trust_observable,trusted:$hooks_trusted},
-       odwPlugin:{requiredVersion:$odw_version,compatible:$odw_compatible},
+       odwPlugin:{requiredVersion:$odw_version,pluginId:$odw_plugin_id,compatible:$odw_compatible,installHint:$odw_install_hint},
        runtimeAttestation:{required:true,observed:false}},
      nativeLane:$native_lane,odwLane:$odw_lane}
   '
+  if [ "$check_odw_compatible" != true ] && { [ "$host" = codex ] || [ "$host" = zcode ]; }; then
+    printf '%s\n' "HINT: $odw_install_hint (installed+enabled on this host). Marketplace package.json at $odw_required_version is not enough." >&2
+  fi
 }
 
 doctor() {
@@ -408,9 +515,7 @@ doctor() {
       doctor_result grok hook_failure_is_fail_open false none false '' '' false false '' '' false false disabled disabled
       return 1 ;;
     zcode)
-      if [ -n "${ZCODE_CONFIG-}" ]; then zcode_config=$ZCODE_CONFIG
-      else [ -n "${HOME-}" ] || fail "HOME is unset; set ZCODE_CONFIG."; zcode_config=$HOME/.zcode/cli/config.json
-      fi
+      resolve_zcode_config
       profile=$zcode_config
       if [ ! -f "$zcode_config" ] || [ -L "$zcode_config" ] || [ ! -r "$zcode_config" ]; then
         doctor_result zcode plugin_settings_required false plugin false '' '' true false '' '' true false disabled disabled
@@ -451,10 +556,10 @@ doctor() {
     profile_source=file
   else
     profile_source=built_in_default
-    profile_advisor_model=gpt-5.6-sol
-    profile_advisor_effort=ultra
-    profile_grunt_model=gpt-5.6-luna
-    profile_grunt_effort=high
+    profile_advisor_model=$default_advisor_model
+    profile_advisor_effort=$default_advisor_effort
+    profile_grunt_model=$default_grunt_model
+    profile_grunt_effort=$default_grunt_effort
   fi
   catalog=$(catalog_path)
   if ! catalog_is_available "$catalog"; then
@@ -478,10 +583,35 @@ doctor() {
   return 1
 }
 
+apply_zcode() {
+  need jq
+  resolve_zcode_config
+  advisor_model=$default_advisor_model
+  advisor_effort=$default_advisor_effort
+  grunt_model=$default_grunt_model
+  grunt_effort=$default_grunt_effort
+  if path_exists "$zcode_config" && [ -f "$zcode_config" ] && [ ! -L "$zcode_config" ] && [ -r "$zcode_config" ] &&
+    zcode_four_settings_present "$zcode_config"; then
+    advisor_model=$(jq -r '.plugins.options["sol-advisor@sol-advisor"].advisor_model' "$zcode_config")
+    advisor_effort=$(jq -r '.plugins.options["sol-advisor@sol-advisor"].advisor_effort' "$zcode_config")
+    grunt_model=$(jq -r '.plugins.options["sol-advisor@sol-advisor"].grunt_model' "$zcode_config")
+    grunt_effort=$(jq -r '.plugins.options["sol-advisor@sol-advisor"].grunt_effort' "$zcode_config")
+    valid_model "$advisor_model" && valid_effort "$advisor_effort" &&
+      valid_model "$grunt_model" && valid_effort "$grunt_effort" ||
+      fail "existing ZCode plugin settings are present but unsafe."
+  fi
+  write_zcode_plugin_settings "$advisor_model" "$advisor_effort" "$grunt_model" "$grunt_effort"
+  printf '%s\n' 'Start a new ZCode session after reviewing plugin settings. Sol/Ultra + Luna/High is one factory preset only.'
+}
+
 apply_profile() {
   parse_host_only "$@"
   [ "$parsed_json" -eq 0 ] || fail "apply does not accept --json."
-  [ "$parsed_host" = codex ] || fail "apply currently supports only --host codex."
+  case "$parsed_host" in
+    zcode) apply_zcode; return 0 ;;
+    codex) ;;
+    *) fail "apply currently supports only --host codex or --host zcode." ;;
+  esac
   need jq
   validate_config_dir
   if path_exists "$profile"; then profile_is_valid "$profile" || fail "Codex profile is unsafe or invalid: $profile"; fi
@@ -523,8 +653,8 @@ remove_codex() {
   if path_exists "$profile"; then
     profile_is_valid "$profile" || fail "Codex profile became invalid during remove preflight."
   else
-    profile_grunt_model=gpt-5.6-luna
-    profile_grunt_effort=high
+    profile_grunt_model=$default_grunt_model
+    profile_grunt_effort=$default_grunt_effort
   fi
   if [ -n "${ADVISOR_AGENT_DIR-}" ]; then agent_dir=$ADVISOR_AGENT_DIR
   elif [ -n "${CODEX_HOME-}" ]; then agent_dir=$CODEX_HOME/agents

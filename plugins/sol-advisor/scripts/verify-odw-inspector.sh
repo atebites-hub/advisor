@@ -7,6 +7,7 @@ must_fail() { label=$1; shift; if "$@" >/dev/null 2>&1; then fail "$label unexpe
 
 script_dir=$(CDPATH= cd "$(dirname "$0")" && pwd) || exit 1
 inspector=$script_dir/inspect-odw-run.sh
+smoke=$script_dir/smoke-odw-one-leaf.sh
 tmp_base=${TMPDIR:-/tmp}; case "$tmp_base" in /*) ;; *) tmp_base=/tmp ;; esac
 tmp_base=$(CDPATH= cd "$tmp_base" && pwd -P)
 tmp=$(mktemp -d "$tmp_base/advisor-odw-verify.XXXXXX") || fail "could not create test directory"
@@ -67,6 +68,19 @@ zcode_output=$(sh "$inspector" --host zcode "$zcode_run")
 printf '%s\n' "$zcode_output" | jq -e '.host == "zcode" and .agent_count == 2 and ([.agents[].runtime_id] | unique | length) == 2 and all(.agents[]; .model == "zai/grunt" and .effort == "low" and .state == "completed")' >/dev/null || fail "ZCode ODW summary is invalid"
 pass "two-node ZCode ODW policy, trace, attestation, and distinct runtime evidence"
 
+one_leaf=$tmp/project/.odw/one-leaf/runs/run-one-leaf
+write_run zcode "$one_leaf" zai/grunt low "$zcode_1" "$zcode_2"
+rm -f "$one_leaf/agents/agent-2.jsonl"
+jq -c 'if .type == "agent_start" and .agentId == 2 then empty elif .type == "agent_end" and .agentId == 2 then empty else . end' \
+  "$one_leaf/events.jsonl" > "$tmp/one-leaf-events"
+mv "$tmp/one-leaf-events" "$one_leaf/events.jsonl"
+jq -c 'if .index == 2 then empty else . end' "$one_leaf/journal.jsonl" > "$tmp/one-leaf-journal"
+mv "$tmp/one-leaf-journal" "$one_leaf/journal.jsonl"
+one_leaf_output=$(sh "$inspector" --host zcode "$one_leaf")
+printf '%s\n' "$one_leaf_output" | jq -e '.host == "zcode" and .agent_count == 1 and .agents[0].runtime_id == "sess_33333333-3333-4333-8333-333333333333"' \
+  >/dev/null || fail "one-leaf ZCode ODW summary is invalid"
+pass "one-leaf ZCode ODW inspect path"
+
 mutated=$tmp/project/.odw/mutated/runs/run-mutated
 write_run zcode "$mutated" zai/grunt low "$zcode_1" "$zcode_2"
 jq 'if .type == "run_start" then .routingPolicyFingerprint=("a"*64) else . end' "$mutated/events.jsonl" > "$tmp/events-mutated"
@@ -94,5 +108,40 @@ must_fail "unsupported Cursor ODW host" sh "$inspector" --host cursor "$zcode_ru
 must_fail "unsupported Claude ODW host" sh "$inspector" --host claude "$zcode_run"
 must_fail "unsupported Grok ODW host" sh "$inspector" --host grok "$zcode_run"
 pass "fingerprint route cache runtime failure and unsupported-host denials"
+
+[ -x "$smoke" ] || fail "one-leaf smoke is not executable: $smoke"
+box=$tmp/box
+mkdir -p "$box"
+if (CDPATH= cd "$box" && sh "$smoke" --host zcode) >"$tmp/smoke-missing.out" 2>"$tmp/smoke-missing.err"; then
+  fail "one-leaf smoke passed without an ODW checkout"
+fi
+grep -Fq 'git submodule update --init plugins/open-dynamic-workflows' "$tmp/smoke-missing.err" ||
+  fail "missing ODW checkout did not print the exact submodule init command"
+mkdir -p "$box/plugins/open-dynamic-workflows"
+if (CDPATH= cd "$box" && sh "$smoke" --host zcode) >"$tmp/smoke-empty.out" 2>"$tmp/smoke-empty.err"; then
+  fail "one-leaf smoke passed on an empty ODW gitlink"
+fi
+grep -Fq 'git submodule update --init plugins/open-dynamic-workflows' "$tmp/smoke-empty.err" ||
+  fail "empty ODW gitlink did not print the exact submodule init command"
+jq -n '{name:"open-dynamic-workflows-plugin",version:"0.2.0"}' > "$box/plugins/open-dynamic-workflows/package.json"
+if (CDPATH= cd "$box" && sh "$smoke" --host zcode) >"$tmp/smoke-version.out" 2>"$tmp/smoke-version.err"; then
+  fail "one-leaf smoke passed on ODW 0.2.0"
+fi
+grep -Fq '0.3.0' "$tmp/smoke-version.err" || fail "wrong-version smoke did not require 0.3.0"
+if grep -Fq 'PASS:' "$tmp/smoke-version.out" "$tmp/smoke-version.err"; then
+  fail "wrong-version smoke soft-passed"
+fi
+jq -n '{name:"open-dynamic-workflows-plugin",version:"0.3.0"}' > "$box/plugins/open-dynamic-workflows/package.json"
+zcode_cfg=$tmp/smoke-zcode.json
+jq -n '{plugins:{enabled:true,enabledPlugins:{"sol-advisor@sol-advisor":true},options:{"sol-advisor@sol-advisor":{advisor_model:"gpt-5.6-sol",advisor_effort:"ultra",grunt_model:"gpt-5.6-luna",grunt_effort:"high"}}}}' > "$zcode_cfg"
+if (CDPATH= cd "$box" && HOME=$tmp ZCODE_CONFIG=$zcode_cfg PATH=/usr/bin:/bin sh "$smoke" --host zcode) >"$tmp/smoke-compat.out" 2>"$tmp/smoke-compat.err"; then
+  fail "one-leaf smoke passed without installed+enabled ODW 0.3.0"
+fi
+grep -Fq 'install/enable open-dynamic-workflows@0.3.0' "$tmp/smoke-compat.err" ||
+  fail "incompatible smoke did not say install/enable open-dynamic-workflows@0.3.0"
+if grep -Fq 'PASS:' "$tmp/smoke-compat.out" "$tmp/smoke-compat.err"; then
+  fail "incompatible smoke soft-passed"
+fi
+pass "one-leaf smoke is fail-closed for missing checkout, wrong version, and compatible=false"
 
 printf '%s\n' "VERIFY ODW INSPECTOR PASSED"
