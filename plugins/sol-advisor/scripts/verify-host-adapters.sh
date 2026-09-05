@@ -41,7 +41,7 @@ write_config() {
 write_config zai/advisor high zai/grunt low
 config_hash=$(shasum -a 256 "$config")
 doctor=$(HOME=$tmp ZCODE_CONFIG=$config sh "$advisor" doctor --host zcode --json || true)
-printf '%s\n' "$doctor" | jq -e '.host == "zcode" and .strict == false and .code == "runtime_attestation_required" and .profileValid == true and .advisor.model == "zai/advisor" and .grunt.model == "zai/grunt"' >/dev/null || fail "ZCode doctor did not report configured attestation-required status"
+printf '%s\n' "$doctor" | jq -e '.host == "zcode" and .strict == false and .code == "runtime_attestation_required" and .profileValid == true and .advisor.model == "zai/advisor" and .grunt.model == "zai/grunt" and .checks.hooks == {configured:true,trustObservable:false,trusted:false}' >/dev/null || fail "ZCode doctor did not report configured attestation-required status"
 [ "$config_hash" = "$(shasum -a 256 "$config")" ] || fail "ZCode doctor mutated host config"
 incomplete=$tmp/incomplete.json
 jq '.plugins.options["sol-advisor@sol-advisor"] |= del(.grunt_effort)' "$config" > "$incomplete"

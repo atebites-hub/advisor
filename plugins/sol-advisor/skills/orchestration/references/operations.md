@@ -111,7 +111,9 @@ completed lifecycle.
 
 After install or any hook change, review and trust all Advisor hooks in `/hooks` and
 start a fresh session. Disabled, untrusted, crashed, timed-out, malformed, or bypassed
-hooks mean the lane is unsupported.
+hooks mean the lane is unsupported. `doctor --host codex` observes
+`~/.codex/config.toml` (or `$CODEX_HOME/config.toml`) `[hooks.state]` `trusted_hash`
+entries for the three Advisor hooks.
 
 Codex workers launched by the compatible ODW plugin carry its `ODW_HOST=codex` and
 `ODW_REQUIRE_CWD=1` markers. They receive bounded-worker context, create no native root
@@ -143,6 +145,8 @@ foreground delegation because only its parent tool result carries joined termina
 child evidence; background launch remains route-correct but is denied by Advisor.
 ZCode plugin hooks must block
 missing, crashing, timed-out, malformed, disabled, or conflicting enforcement paths.
+ZCode has no equivalent `[hooks.state]` `trusted_hash` surface, so
+`doctor --host zcode` reports `trustObservable=false` and `trusted=false`.
 The ZCode ODW executor's `ZCODE_ODW_PROTOCOL=1` workers are accepted only with a
 runtime-owned standalone ODW attestation and cannot launch nested native agents; their
 exact tuple and completion remain subject to post-run ODW inspection.

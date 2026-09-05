@@ -210,6 +210,7 @@ grep -Fq 'ODW unused' "$repo_dir/README.md" ||
 grep -Fq 'unproven' "$repo_dir/README.md" || fail "README omits unproven alignment status"
 grep -Fq 'native_advisor_unverified' "$repo_dir/README.md" || fail "README omits Claude doctor code"
 grep -Fq 'apply --host zcode' "$repo_dir/README.md" || fail "README omits ZCode apply"
+grep -Fq '[hooks.state]' "$repo_dir/README.md" || fail "README omits Codex doctor hooks.state observation"
 grep -Fq 'configure --host zcode' "$repo_dir/README.md" || fail "README omits ZCode configure"
 grep -Fq 'plugin_settings_required' "$repo_dir/README.md" || fail "README omits ZCode plugin_settings_required"
 grep -Fq 'install/enable open-dynamic-workflows@0.3.0' "$repo_dir/README.md" || fail "README omits ODW install/enable seating gate"
@@ -253,6 +254,7 @@ fi
 grep -Fq 'catalog-backed advisor/grunt pair' "$plugin_dir/bin/advisor" || fail "advisor helper usage omits catalog-backed pairs"
 grep -Fq 'apply --host codex|zcode' "$plugin_dir/bin/advisor" || fail "advisor helper usage omits ZCode apply"
 grep -Fq 'install/enable open-dynamic-workflows@0.3.0' "$plugin_dir/bin/advisor" || fail "advisor helper omits ODW install/enable hint"
+grep -Fq '[hooks.state] trusted_hash' "$plugin_dir/bin/advisor" || fail "advisor helper omits Codex hooks.state observation"
 grep -Fq 'defer_to_native_when_present' "$plugin_dir/bin/advisor" || fail "advisor helper omits Claude native-first seating"
 grep -Fq 'nativeAdvisor=unverified' "$plugin_dir/bin/advisor" || fail "advisor helper omits honest Claude nativeAdvisor=unverified"
 grep -Fq 'ODW alignment required' "$plugin_dir/bin/advisor" || fail "advisor helper omits required ODW alignment"
@@ -279,6 +281,11 @@ grep -Fq 'install/enable open-dynamic-workflows@0.3.0' "$plugin_dir/skills/orche
   fail "odw.md omits install/enable seating wording"
 grep -Fq 'apply --host zcode' "$plugin_dir/skills/orchestration/references/operations.md" ||
   fail "operations.md omits ZCode apply"
+grep -Fq '[hooks.state]' "$plugin_dir/skills/orchestration/references/operations.md" &&
+  grep -Fq 'trusted_hash' "$plugin_dir/skills/orchestration/references/operations.md" ||
+  fail "operations.md omits Codex doctor hooks.state trusted_hash observation"
+grep -Fq 'trustObservable=false' "$plugin_dir/skills/orchestration/references/operations.md" ||
+  fail "operations.md omits honest ZCode hook-trust unobservability"
 for section in OBJECTIVE 'FILES AND OWNERSHIP' INTERFACES CONSTRAINTS VERIFICATION RETURN 'IMPLEMENTATION REPORT'; do
   grep -Fq "$section" "$plugin_dir/skills/orchestration/references/role-contracts.md" || fail "grunt packet omits $section"
 done

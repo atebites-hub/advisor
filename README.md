@@ -95,6 +95,8 @@ Open `/hooks`, review and trust all Advisor hooks, then run:
 $advisor doctor --host codex
 ```
 
+`doctor --host codex` observes `~/.codex/config.toml` `[hooks.state]` `trusted_hash` entries.
+
 Start a fresh task and vibe code normally. Advisor activates at session start, verifies
 the primary runtime before native or ODW delegation, delegates a bounded packet only
 when useful, and performs the final review in the primary task. A mismatched primary

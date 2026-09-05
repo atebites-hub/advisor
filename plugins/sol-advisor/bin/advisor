@@ -13,6 +13,7 @@ usage() {
     '  configure accepts any catalog-backed advisor/grunt pair. Codex and ZCode factory apply use the Sol/Ultra + Luna/High preset only.' \
     '  ZCode apply/configure write those tuples into plugin settings (`~/.zcode/cli/config.json` or ZCODE_CONFIG). They do not rewrite host model or provider credentials.' \
     '  doctor reports odwPlugin.compatible=true only when open-dynamic-workflows@open-dynamic-workflows is installed+enabled at version 0.3.0 on that Codex or ZCode host. Marketplace package.json at 0.3.0 is not enough.' \
+    '  Codex doctor observes ~/.codex/config.toml [hooks.state] trusted_hash entries. ZCode has no equivalent trust surface, so trustObservable and trusted stay false.' \
     '  If compatible=false, install/enable open-dynamic-workflows@0.3.0 on that host.' \
     '  Cursor CLI is `agent` / `cursor-agent`. Doctor reports gaps; it does not enable delegation.' \
     '  Claude: prefer ultracode / Opus plan when that is the right tool; doctor defers to that native path (`nativeAdvisor=unverified`) and never enables plugin-strict seating.' \
@@ -353,6 +354,136 @@ resolve_cursor_plugin_root() {
   fi
 }
 
+resolve_codex_config() {
+  codex_config=
+  if [ -n "${CODEX_HOME-}" ]; then
+    case "$CODEX_HOME" in /*) codex_home=$CODEX_HOME ;; *) codex_home=$(pwd -P)/$CODEX_HOME ;; esac
+    case "$codex_home" in /|//) return 0 ;; esac
+    codex_config=$codex_home/config.toml
+  elif [ -n "${HOME-}" ]; then
+    codex_config=$HOME/.codex/config.toml
+  fi
+}
+
+codex_config_is_readable() {
+  [ -n "${codex_config-}" ] && [ -f "$codex_config" ] && [ ! -L "$codex_config" ] && [ -r "$codex_config" ]
+}
+
+codex_hooks_state_readable() {
+  grep -Eq '^[[:space:]]*\[hooks\.state(\]|[."])' "$1"
+}
+
+codex_hooks_state_trusted_hash() {
+  config=$1 key=$2
+  awk -v key="$key" '
+    function trim(s) {
+      gsub(/\r/, "", s)
+      sub(/^[[:space:]]+/, "", s)
+      sub(/[[:space:]]+$/, "", s)
+      return s
+    }
+    function unquote(s) {
+      s = trim(s)
+      sub(/[[:space:]]+#.*$/, "", s)
+      s = trim(s)
+      if (s ~ /^".*"$/) return substr(s, 2, length(s) - 2)
+      if (s ~ /^\047.*\047$/) return substr(s, 2, length(s) - 2)
+      return s
+    }
+    function hash_from_assignment(s) {
+      sub(/^[^=]*=/, "", s)
+      return unquote(s)
+    }
+    {
+      line = $0
+      gsub(/\r/, "", line)
+    }
+    line ~ /^[[:space:]]*\[/ {
+      hdr = trim(line)
+      in_key = (hdr == "[hooks.state.\"" key "\"]" || hdr == "[hooks.state.\047" key "\047]")
+      in_table = (hdr == "[hooks.state]")
+      next
+    }
+    in_key && line ~ /^[[:space:]]*trusted_hash[[:space:]]*=/ {
+      print hash_from_assignment(line)
+      exit
+    }
+    in_table && index(line, key) && line ~ /trusted_hash[[:space:]]*=/ {
+      if (match(line, /trusted_hash[[:space:]]*=[[:space:]]*("[^"]+"|\047[^\047]+\047)/)) {
+        print hash_from_assignment(substr(line, RSTART, RLENGTH))
+        exit
+      }
+    }
+  ' "$config"
+}
+
+codex_advisor_expected_hook_hash() {
+  event_name=$1 event_key=$2
+  hooks_json=$plugin_dir/hooks/hooks.json
+  [ -f "$hooks_json" ] && [ -r "$hooks_json" ] || return 1
+  jq -e --arg event "$event_name" '
+    (.hooks[$event] | type == "array" and length == 1) and
+    (.hooks[$event][0].hooks | type == "array" and length == 1) and
+    (.hooks[$event][0].hooks[0] | type == "object" and .type == "command" and
+      (.command | type == "string" and length > 0))
+  ' "$hooks_json" >/dev/null 2>&1 || return 1
+  matcher=$(jq -r --arg event "$event_name" '.hooks[$event][0].matcher // empty' "$hooks_json")
+  command=$(jq -r --arg event "$event_name" '.hooks[$event][0].hooks[0].command' "$hooks_json")
+  timeout=$(jq -r --arg event "$event_name" '.hooks[$event][0].hooks[0].timeout // empty' "$hooks_json")
+  status=$(jq -r --arg event "$event_name" '.hooks[$event][0].hooks[0].statusMessage // empty' "$hooks_json")
+  async=$(jq -r --arg event "$event_name" 'if .hooks[$event][0].hooks[0].async == true then true else false end' "$hooks_json")
+  [ -n "$timeout" ] || timeout=600
+  printf '%s\n' "$timeout" | grep -Eq '^[1-9][0-9]*$' || return 1
+  script=
+  case "$command" in
+    *'${PLUGIN_ROOT}/hooks/enforce-codex.sh'*) script=$plugin_dir/hooks/enforce-codex.sh ;;
+    *'${PLUGIN_ROOT}/hooks/session-context.sh'*) script=$plugin_dir/hooks/session-context.sh ;;
+    *) return 1 ;;
+  esac
+  [ -f "$script" ] && [ -r "$script" ] || return 1
+  # Hash the script so a missing file cannot pass. Codex stores the hook-json identity.
+  script_hash=$(shasum -a 256 "$script" | awk '{print $1}')
+  [ -n "$script_hash" ] || return 1
+  if [ -n "$status" ]; then
+    identity=$(jq -cn --arg event_name "$event_key" --arg matcher "$matcher" --arg command "$command" \
+      --argjson timeout "$timeout" --argjson async "$async" --arg statusMessage "$status" \
+      '{event_name:$event_name,hooks:[{async:$async,command:$command,statusMessage:$statusMessage,timeout:$timeout,type:"command"}],matcher:$matcher}')
+  else
+    identity=$(jq -cn --arg event_name "$event_key" --arg matcher "$matcher" --arg command "$command" \
+      --argjson timeout "$timeout" --argjson async "$async" \
+      '{event_name:$event_name,hooks:[{async:$async,command:$command,timeout:$timeout,type:"command"}],matcher:$matcher}')
+  fi || return 1
+  digest=$(printf '%s' "$identity" | jq -cjS . | shasum -a 256 | awk '{print $1}')
+  [ -n "$digest" ] || return 1
+  printf 'sha256:%s\n' "$digest"
+}
+
+codex_advisor_hooks_trusted() {
+  config=$1
+  for spec in 'PreToolUse:pre_tool_use' 'SessionStart:session_start' 'SubagentStart:subagent_start'; do
+    event_name=${spec%%:*}
+    event_key=${spec#*:}
+    key="sol-advisor@sol-advisor:hooks/hooks.json:${event_key}:0:0"
+    observed=$(codex_hooks_state_trusted_hash "$config" "$key")
+    [ -n "$observed" ] || return 1
+    expected=$(codex_advisor_expected_hook_hash "$event_name" "$event_key") || return 1
+    [ "$observed" = "$expected" ] || return 1
+  done
+}
+
+observe_codex_hook_trust() {
+  check_hook_trust_observable=false
+  check_hooks_trusted=false
+  [ "$check_hooks_configured" = true ] || return 0
+  resolve_codex_config
+  codex_config_is_readable || return 0
+  codex_hooks_state_readable "$codex_config" || return 0
+  check_hook_trust_observable=true
+  if codex_advisor_hooks_trusted "$codex_config"; then
+    check_hooks_trusted=true
+  fi
+}
+
 probe_host() {
   check_cli_present=false check_cli_version= check_files_current=false
   check_hooks_configured=false check_hook_trust_observable=false check_hooks_trusted=false
@@ -389,6 +520,7 @@ probe_host() {
   done
   if [ "$1" = codex ]; then
     [ -f "$plugin_dir/hooks/hooks.json" ] && [ -f "$plugin_dir/hooks/enforce-codex.sh" ] && [ -f "$plugin_dir/hooks/session-context.sh" ] && check_hooks_configured=true
+    observe_codex_hook_trust
     if sh "$installer" --profile "$profile" --check --check-role grunt >/dev/null 2>&1; then check_files_current=true; fi
     if [ "$check_cli_present" = true ] && plugin_list=$(codex plugin list --json 2>/dev/null); then
       if printf '%s\n' "$plugin_list" | odw_list_is_compatible; then
@@ -396,6 +528,7 @@ probe_host() {
       fi
     fi
   elif [ "$1" = zcode ]; then
+    # ZCode has no hooks.state trusted_hash surface; leave trustObservable/trusted false.
     { [ -f "$plugin_dir/.zcode-plugin/plugin.json" ] || [ -f "$plugin_dir/../../.zcode-plugin/plugin.json" ]; } &&
       [ -f "$plugin_dir/hosts/zcode/hooks/hooks.json" ] && [ -f "$plugin_dir/hosts/zcode/hooks/enforce.sh" ] && check_files_current=true
     if [ "$check_cli_present" = true ] && plugin_list=$(zcode plugins list --json 2>/dev/null); then

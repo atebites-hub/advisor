@@ -36,8 +36,11 @@ jq -n '{models:[
   {slug:"custom/grunt",supported_reasoning_levels:[{effort:"medium"}]}
 ]}' > "$catalog"
 
+codex_home=$tmp_dir/codex-home
+mkdir -p "$codex_home" "$tmp_dir/home"
 run_advisor() {
-  ADVISOR_CONFIG_HOME=$config_home ADVISOR_MODEL_CATALOG=$catalog ADVISOR_AGENT_DIR=$tmp_dir/agents sh "$advisor" "$@"
+  ADVISOR_CONFIG_HOME=$config_home ADVISOR_MODEL_CATALOG=$catalog ADVISOR_AGENT_DIR=$tmp_dir/agents \
+    CODEX_HOME=$codex_home HOME=$tmp_dir/home sh "$advisor" "$@"
 }
 
 profile=$config_home/codex.json
@@ -93,6 +96,79 @@ printf '%s\n' "$doctor_json" | jq -e '
   .checks.runtimeAttestation == {required:true,observed:false}
 ' >/dev/null || fail "doctor JSON is not the allowlisted schema"
 pass "doctor is read-only and reports independently validated tuples"
+
+plugin_dir=$(CDPATH= cd "$script_dir/.." && pwd) || fail "could not resolve plugin directory"
+eval "$(sed -n '/^codex_advisor_expected_hook_hash()/,/^}$/p' "$advisor")"
+pre_hash=$(codex_advisor_expected_hook_hash PreToolUse pre_tool_use) || fail "could not hash the PreToolUse hook entry"
+session_hash=$(codex_advisor_expected_hook_hash SessionStart session_start) || fail "could not hash the SessionStart hook entry"
+subagent_hash=$(codex_advisor_expected_hook_hash SubagentStart subagent_start) || fail "could not hash the SubagentStart hook entry"
+printf '%s\n' "$pre_hash" "$session_hash" "$subagent_hash" | grep -Eq '^sha256:[0-9a-f]{64}$' || fail "expected hook hashes are not sha256"
+[ "$(printf '%s\n' "$pre_hash" "$session_hash" "$subagent_hash" | sort -u | wc -l | tr -d ' ')" = 3 ] ||
+  fail "expected Advisor hook hashes are not distinct"
+
+write_hooks_state() {
+  dest=$1
+  printf '%s\n' \
+    '[hooks.state."sol-advisor@sol-advisor:hooks/hooks.json:pre_tool_use:0:0"]' \
+    "trusted_hash = \"$2\"" \
+    '[hooks.state."sol-advisor@sol-advisor:hooks/hooks.json:session_start:0:0"]' \
+    "trusted_hash = \"$3\"" \
+    '[hooks.state."sol-advisor@sol-advisor:hooks/hooks.json:subagent_start:0:0"]' \
+    "trusted_hash = \"$4\"" > "$dest"
+}
+
+assert_doctor_hooks() {
+  label=$1 home=$2 configured=$3 observable=$4 trusted=$5
+  json=$(ADVISOR_CONFIG_HOME=$config_home ADVISOR_MODEL_CATALOG=$catalog ADVISOR_AGENT_DIR=$tmp_dir/agents \
+    CODEX_HOME=$home HOME=$tmp_dir/home sh "$advisor" doctor --host codex --json || true)
+  printf '%s\n' "$json" | jq -e --argjson configured "$configured" --argjson observable "$observable" --argjson trusted "$trusted" \
+    '.checks.hooks == {configured:$configured,trustObservable:$observable,trusted:$trusted}' >/dev/null ||
+    fail "doctor hook trust $label: expected configured=$configured trustObservable=$observable trusted=$trusted"
+}
+
+mkdir -p "$tmp_dir/codex-plain"
+printf '%s\n' 'model = "gpt-5.6-sol"' > "$tmp_dir/codex-plain/config.toml"
+assert_doctor_hooks 'config-without-hooks-state' "$tmp_dir/codex-plain" true false false
+
+mkdir -p "$tmp_dir/codex-empty-state"
+printf '%s\n' '[hooks.state]' > "$tmp_dir/codex-empty-state/config.toml"
+assert_doctor_hooks 'empty-hooks-state' "$tmp_dir/codex-empty-state" true true false
+
+mkdir -p "$tmp_dir/codex-untrusted"
+write_hooks_state "$tmp_dir/codex-untrusted/config.toml" \
+  'sha256:0000000000000000000000000000000000000000000000000000000000000000' \
+  "$session_hash" "$subagent_hash"
+assert_doctor_hooks 'hash-mismatch' "$tmp_dir/codex-untrusted" true true false
+
+pre_file=sha256:$(shasum -a 256 "$plugin_dir/hooks/enforce-codex.sh" | awk '{print $1}')
+session_file=sha256:$(shasum -a 256 "$plugin_dir/hooks/session-context.sh" | awk '{print $1}')
+mkdir -p "$tmp_dir/codex-filehash"
+write_hooks_state "$tmp_dir/codex-filehash/config.toml" "$pre_file" "$session_file" "$session_file"
+assert_doctor_hooks 'script-file-hash-is-not-enough' "$tmp_dir/codex-filehash" true true false
+
+mkdir -p "$tmp_dir/codex-partial"
+write_hooks_state "$tmp_dir/codex-partial/config.toml" "$pre_hash" "$session_hash" \
+  'sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff'
+assert_doctor_hooks 'two-of-three' "$tmp_dir/codex-partial" true true false
+
+mkdir -p "$tmp_dir/codex-trusted"
+write_hooks_state "$tmp_dir/codex-trusted/config.toml" "$pre_hash" "$session_hash" "$subagent_hash"
+trusted_before=$(shasum -a 256 "$tmp_dir/codex-trusted/config.toml")
+assert_doctor_hooks 'matching-identity-hashes' "$tmp_dir/codex-trusted" true true true
+[ "$trusted_before" = "$(shasum -a 256 "$tmp_dir/codex-trusted/config.toml")" ] || fail "doctor mutated Codex hook state"
+
+mkdir -p "$tmp_dir/codex-inline"
+printf '%s\n' '[hooks.state]' \
+  "\"sol-advisor@sol-advisor:hooks/hooks.json:pre_tool_use:0:0\" = { trusted_hash = \"$pre_hash\" }" \
+  "\"sol-advisor@sol-advisor:hooks/hooks.json:session_start:0:0\" = { trusted_hash = \"$session_hash\" }" \
+  "\"sol-advisor@sol-advisor:hooks/hooks.json:subagent_start:0:0\" = { trusted_hash = \"$subagent_hash\" }" \
+  > "$tmp_dir/codex-inline/config.toml"
+assert_doctor_hooks 'inline-hooks-state' "$tmp_dir/codex-inline" true true true
+
+mkdir -p "$tmp_dir/codex-link"
+ln -s "$tmp_dir/codex-trusted/config.toml" "$tmp_dir/codex-link/config.toml"
+assert_doctor_hooks 'symlinked-codex-config' "$tmp_dir/codex-link" true false false
+pass "doctor fixtures cover untrusted and trusted Codex hooks.state shapes"
 
 # Exercise odw_list_is_compatible from advisor without running the CLI.
 odw_plugin_id=open-dynamic-workflows@open-dynamic-workflows
