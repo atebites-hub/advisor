@@ -173,12 +173,14 @@ must_fail "wrong-role ZCode ODW" sh "$inspector" --mode odw --route "$route" --r
 must_fail "cross-mode native evidence" inspect_native "$trace" advisor
 pass "standalone ZCode ODW attestation and cross-mode rejection"
 
-for host_code in 'cursor runtime_effort_attestation_unavailable' 'claude runtime_effort_attestation_unavailable' 'grok hook_failure_is_fail_open'; do
+for host_code in 'cursor runtime_effort_attestation_unavailable' 'claude native_advisor_unverified' 'grok hook_failure_is_fail_open'; do
   set -- $host_code
   output=$(ADVISOR_CONFIG_HOME=$tmp/doctor sh "$advisor" doctor --host "$1" --json || true)
   printf '%s\n' "$output" | jq -e --arg host "$1" --arg code "$2" '
     .host == $host and .strict == false and .code == $code and .nativeLane == "disabled" and .odwLane == "disabled" and
-    (if $host == "cursor" then has("diagnostics") and .diagnostics.enforcementHook == false else (has("diagnostics") | not) end)
+    (if $host == "cursor" then has("diagnostics") and .diagnostics.enforcementHook == false
+     elif $host == "claude" then .diagnostics.seating == "defer_to_native_when_present" and .diagnostics.nativeAdvisor == "unverified" and .diagnostics.odwDefault == false
+     else (has("diagnostics") | not) end)
   ' >/dev/null || fail "$1 doctor overclaimed support"
 done
 must_fail "Grok Bot exclusion" env ADVISOR_CONFIG_HOME=$tmp/doctor sh "$advisor" doctor --host grok-bot --json

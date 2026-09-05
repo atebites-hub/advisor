@@ -1,7 +1,7 @@
 {
   "name": "sol-advisor",
   "version": "0.9.3",
-  "description": "Advisor guidance for Claude Code: experimental detection; strict delegation disabled until resolved effort is authoritative.",
+  "description": "Advisor guidance for Claude Code: prefer native advisor/Opus plan (ultracode) when present; plugin seating is guidance-only. experimental detection; strict delegation disabled until resolved effort is authoritative.",
   "author": {"name": "atebites-hub", "url": "https://github.com/atebites-hub/advisor"},
   "homepage": "https://github.com/atebites-hub/advisor",
   "repository": "https://github.com/atebites-hub/advisor",

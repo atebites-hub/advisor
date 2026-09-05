@@ -6,28 +6,47 @@ work only when the host can prove the actual role, model, effort, parent, and co
 state.
 
 The product name is **Advisor**. The GitHub repository is
-[`atebites-hub/advisor`](https://github.com/atebites-hub/advisor). The package
-coordinate stays `sol-advisor@sol-advisor` so existing installs keep upgrading.
+[`atebites-hub/advisor`](https://github.com/atebites-hub/advisor) (former slug
+`sol-advisor` still redirects). The package coordinate stays
+`sol-advisor@sol-advisor` so existing installs keep upgrading.
 
 Any catalog-backed advisor/grunt pair is valid. GPT-5.6 Sol / Ultra + GPT-5.6 Luna /
 High is one Codex default **preset**, not the product identity.
 
 ## Support
 
-| Host | Native delegation | ODW delegation | Status |
+| Host | Native orchestration | Plugin Advisor seating | ODW |
 |---|---|---|---|
-| Codex CLI / ChatGPT Codex app | custom `advisor_grunt` plus rollout inspection | Codex executor plus rollout inspection | strict after hook trust and live runtime acceptance |
-| ZCode | persisted `main` / `lite` policy plus runtime attestation | ZCode executor plus runtime attestation | strict on the maintained fork after live runtime acceptance |
-| Cursor IDE / Cursor CLI (`agent`) | disabled | disabled | first-class plugin, commands, CLI install, and doctor; strict delegation refused until runtime evidence can prove role, model, effort, parent, and completion |
-| Claude Code | disabled | disabled | experimental detection; strict delegation disabled |
-| Grok Build | disabled | disabled | experimental detection; strict delegation disabled because hook failures are fail-open |
+| Codex CLI / ChatGPT Codex app | **ultra mode first** | strict `advisor_grunt` after hook trust and live rollout evidence | optional; not the default orchestrator |
+| ZCode | persisted `main` / `lite` plus runtime attestation | strict on the maintained fork after live attestation | optional; supported after the same evidence contract |
+| Cursor IDE / Cursor CLI (`agent`) | **multitask first** (under-investigated) | first-class plugin, commands, CLI install, and doctor; strict seating disabled | not default; refused until runtime evidence can prove role, model, effort, parent, and completion |
+| Claude Code | **ultracode / Opus plan first** when present | defer to that native path; else plugin guidance only. Never overlay Sol-style strict seating | not default; rejected |
+| Grok Build | none proven | experimental detection; strict delegation disabled because hook failures are fail-open | rejected |
 | Grok Bot | excluded | excluded | excluded |
 
-Antigravity and GitHub Copilot are **deferred gaps**: this repository has no adapter,
-doctor host, or evidence contract for them. A missing row is not a soft pass.
+Native orchestration is preferred. ODW is for multi-executor / harness-agnostic
+fan-out that those natives do not cover. See [Native-first vs ODW](#native-first-vs-odw).
+
+Antigravity and GitHub Copilot are **deferred gaps** (Copilot Lane B is parked).
+This repository has no adapter, doctor host, or evidence contract for them. A
+missing row is not a soft pass.
 
 Advisor is not a factory default. Superpowers remains the provisional factory skill
 pack; enabling Advisor there is a separate consumer change.
+
+## Native-first vs ODW
+
+| Host | Use this native path | Use ODW only when |
+|---|---|---|
+| Claude Code | ultracode, or Claude's built-in advisor / Opus plan | multi-executor or harness-agnostic fan-out the native path cannot cover |
+| ChatGPT / Codex | ultra mode | same |
+| Cursor | multitask (needs a better live investigation before we treat it as proven) | same |
+| ZCode | native Agent with persisted `lite` attestation | scaled or rerunnable work that already satisfies the ODW inspector |
+
+`$advisor doctor` never treats ODW as required, and never reports `strict: true`
+from ODW being installed. Codex and ZCode may accept an ODW run after
+`inspect-odw-run.sh` proves a fresh completed trace. Claude, Cursor, and Grok
+stay ODW-disabled.
 
 ## Install and start coding
 
@@ -38,7 +57,9 @@ codex plugin marketplace add atebites-hub/advisor --ref main
 codex plugin add sol-advisor@sol-advisor
 ```
 
-In Codex, invoke `$advisor`. Configure any catalog-backed pair, then apply it:
+In Codex, invoke `$advisor`. Prefer ultra mode for ordinary orchestration.
+Configure any catalog-backed pair, then apply it when you want plugin grunt
+seating:
 
 ```text
 $advisor configure --host codex --advisor-model MODEL --advisor-effort EFFORT --grunt-model MODEL --grunt-effort EFFORT
@@ -95,6 +116,10 @@ Install the repository as a Cursor plugin. The package coordinate stays
 executable to your shell `PATH`; `/advisor` and the packaged helper are the
 entrypoints.
 
+Prefer Cursor **multitask** for native fan-out. That surface still needs a
+better live investigation before Advisor will treat it as proven seating.
+Strict plugin delegation stays disabled.
+
 **Local plugin (IDE + CLI, no Customize required for CLI):**
 
 ```sh
@@ -150,37 +175,52 @@ agent mcp list-tools open-dynamic-workflows
 
 Start a fresh Agent session after install. `sessionStart` injects the
 orchestration contract as additional context in the IDE and in CLI plugin
-sessions. Stay in `solo`. Strict native and ODW delegation on Cursor remain
-disabled: child Task hooks omit grunt effort, Cursor hook failures are
-fail-open, plugin agents cannot pin model/effort, and the ODW `cursor`
-executor's print-mode result does not attest observed model, effort, role, or
-parent. Do not enable fail-open delegation.
+sessions. Stay in `solo` unless Cursor multitask is already doing the fan-out.
+Do not enable fail-open plugin delegation.
 
-### Claude Code and Grok Build
+### Claude Code
 
-Install this repository through the host's plugin marketplace and invoke its
-installed `advisor` skill. These packages intentionally provide guidance and
-diagnostics only. Their current runtimes cannot prove the identical strict
-contract, so Advisor refuses delegation instead of treating requested settings
-as runtime evidence.
+Install this repository through the Claude plugin marketplace and invoke the
+installed `advisor` skill for diagnostics only.
 
-## Upgrade from `atebites-hub/sol-advisor`
+Claude already has a built-in advisor / Opus plan path (**ultracode**). Detect
+that harness and **defer to it**. Do not seat a Sol-style plugin advisor/grunt
+pair as if Claude had none.
 
-GitHub renamed this fork to [`atebites-hub/advisor`](https://github.com/atebites-hub/advisor).
-`https://github.com/atebites-hub/sol-advisor` redirects. The parent remains
-[DannyMac180/sol-advisor](https://github.com/DannyMac180/sol-advisor); this is
-still a true fork.
+```text
+$advisor doctor --host claude --json
+```
 
-| Surface | After rename | Why it stayed |
+Doctor is honest and fail-closed:
+
+- `strict` is always `false`
+- `odwLane` is `disabled` (ODW is not Claude's default orchestrator)
+- `code` is `native_advisor_unverified` until a live Claude fixture maps the
+  Opus plan / ultracode command surface
+- `diagnostics.seating` is `defer_to_native_when_present`
+- `diagnostics.nativeAdvisor` stays `unverified` in this release (follow-up:
+  prove the native path, then set `present` and keep plugin seating off)
+
+If the native path is absent, the plugin skill is guidance only. It is not
+runtime proof and must not spawn a Codex-shaped grunt.
+
+### Grok Build
+
+Install through the host marketplace and run `doctor --host grok`. Guidance
+only; hook failures are fail-open, so strict delegation stays disabled.
+
+## Names and coordinates
+
+| Surface | Value | Why |
 |---|---|---|
-| Marketplace add | `atebites-hub/advisor` | repo slug |
-| Plugin / package id | `sol-advisor@sol-advisor` | Codex, ZCode options key, and Cursor local path `~/.cursor/plugins/local/sol-advisor` would break if renamed here |
-| Display name | Advisor | product identity |
-| atebites-plugins pins / catalog paths | unchanged in this PR | consumer cutover is a separate Factory Plugins change |
+| Product name | Advisor | displayName, docs, doctor |
+| GitHub slug | `atebites-hub/advisor` | renamed fork; `atebites-hub/sol-advisor` redirects |
+| Package coordinate | `sol-advisor@sol-advisor` | Codex add, ZCode options key, Cursor local path |
+| Codex default pair | Sol / Ultra + Luna / High | one catalog preset, not product identity |
+| Upstream parent | `DannyMac180/sol-advisor` | keep the true fork; do not orphan |
 
 Keep using `$advisor`, `/advisor`, and `$sol-advisor:advisor`. Do not look for a
-PATH `advisor` binary. Old marketplace add commands that still say
-`atebites-hub/sol-advisor` usually work via redirect; prefer the new slug.
+PATH `advisor` binary. atebites-plugins pins stay unchanged in this PR.
 
 The GitHub About description is repository metadata, not a file in this tree.
 Update it in repo Settings (or `gh repo edit --description`) to Advisor framing;
@@ -188,13 +228,18 @@ the inherited Codex-native About text is stale.
 
 ## Open Dynamic Workflows
 
-With `open-dynamic-workflows` 0.3.0 installed, Advisor may choose ODW for scaled or
-rerunnable work. It passes one immutable `{executor, model, reasoningEffort}` policy,
-rejects node conflicts before launch, and accepts only fresh completed traces whose
-host runtime evidence matches that policy. Codex and ZCode are the supported ODW hosts;
-Cursor is detected and diagnosed, then refused until its executor can prove the same
-contract. Claude Code and Grok Build remain experimental hosts and are rejected.
-Ordinary work stays on the native path.
+With `open-dynamic-workflows` 0.3.0 installed, Advisor may choose ODW for
+**scaled or rerunnable multi-executor work that native orchestration does not
+cover**. It is not the default orchestrator on Claude (ultracode), Codex
+(ultra mode), or Cursor (multitask).
+
+When ODW is used, Advisor passes one immutable
+`{executor, model, reasoningEffort}` policy, rejects node conflicts before
+launch, and accepts only fresh completed traces whose host runtime evidence
+matches that policy. Codex and ZCode are the only accepted ODW executors.
+Cursor may be the host process (`ODW_HOST=cursor`) and is still refused as an
+executor. Claude Code and Grok Build remain rejected. Ordinary work stays on
+the native path.
 
 The policy fingerprint is correlation evidence, not proof by itself. The primary
 advisor still inspects the real output, reruns verification, and renders the verdict.

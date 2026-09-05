@@ -12,6 +12,8 @@ usage() {
     '  advisor doctor --host codex|zcode|grok|cursor|claude [--json]' \
     '  configure accepts any catalog-backed advisor/grunt pair. Codex built-in default is the Sol/Ultra + Luna/High preset only.' \
     '  Cursor CLI is `agent` / `cursor-agent`. Doctor reports gaps; it does not enable delegation.' \
+    '  Claude: prefer ultracode / Opus plan; doctor defers to that native path and never enables plugin-strict seating.' \
+    '  ODW is not the default orchestrator on Claude, Codex ultra mode, or Cursor multitask.' \
     '  advisor remove --host codex'
 }
 
@@ -319,6 +321,24 @@ probe_host() {
   fi
 }
 
+claude_diagnostics() {
+  jq -n --argjson cli_present "$check_cli_present" --arg cli_version "$check_cli_version" '{
+    seating:"defer_to_native_when_present",
+    nativeAdvisor:"unverified",
+    nativeOrchestrator:"ultracode",
+    pluginStrict:false,
+    odwDefault:false,
+    followUp:"live_claude_opus_plan_fixture",
+    cliPresent:$cli_present,
+    cliVersion:$cli_version,
+    gaps:[
+      "opus_plan_surface_unmapped",
+      "ultracode_attestation_unavailable",
+      "resolved_effort_not_authoritative"
+    ]
+  }'
+}
+
 cursor_diagnostics() {
   jq -n --arg cli_binary "$check_cli_binary" --arg cli_kind "$check_cli_kind" \
     --arg plugin_root "$check_plugin_root" --arg plugin_root_source "$check_plugin_root_source" \
@@ -381,7 +401,8 @@ doctor() {
         jq --argjson diagnostics "$(cursor_diagnostics)" '. + {diagnostics:$diagnostics}'
       return 1 ;;
     claude)
-      doctor_result claude runtime_effort_attestation_unavailable false none false '' '' false false '' '' false false disabled disabled
+      doctor_result claude native_advisor_unverified false none false '' '' false false '' '' false false disabled disabled |
+        jq --argjson diagnostics "$(claude_diagnostics)" '. + {diagnostics:$diagnostics}'
       return 1 ;;
     grok)
       doctor_result grok hook_failure_is_fail_open false none false '' '' false false '' '' false false disabled disabled

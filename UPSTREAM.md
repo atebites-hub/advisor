@@ -49,6 +49,8 @@ recording the deferral here.
 | Cross-host Advisor (Cursor, ZCode, Claude Code, Grok) | Upstream is Codex-only; factory hosts need install, doctor, and truthful routing | **High** — README, skills, `verify.sh`, host packages |
 | Product name Advisor; Sol/Luna is one Codex preset | Upstream product identity is Sol-specific; factory copy and doctor treat any catalog-backed pair as valid | Medium — README, skills, helper usage |
 | Repo slug `atebites-hub/advisor` | GitHub renamed this fork; workflow `github.repository` and origin URL must match. Package id stays `sol-advisor` | Medium — README, workflows, homepage URLs |
+| Claude native-first seating | Claude has ultracode / Opus plan; doctor defers to that path and never overlays Sol-style strict seating | Medium — README, doctor, Claude skill copy |
+| Native-first vs ODW | ODW is not the default orchestrator on Claude, Codex ultra mode, or Cursor multitask | Medium — README, `odw.md`, operations |
 | First-class Cursor IDE / CLI plugin | `.cursor-plugin/`, `install-cursor.sh`, session context, doctor; strict delegation stays disabled | Medium — plugin manifests and Cursor hooks |
 | Isolated host plugin packages | Codex / ZCode / Cursor packages stay separate so one host cannot load another host's files | Medium — marketplace and package layout |
 | Packaged `advisor` helper + canonical paths | `$advisor` / `/advisor` run the in-repo helper; no PATH binary | Medium — `bin/advisor`, `find-helper.sh` |
@@ -69,7 +71,8 @@ and smoke.
 | atebites-plugins pin / catalog cutover (`sol-advisor` → `advisor` paths) | Separate consumer PR after this fork lands; do not bump pins here |
 | Advisor as factory default | Superpowers remains the provisional factory pack |
 | Strict Cursor / Claude / Grok delegation | Hosts still cannot prove role, model, effort, parent, and completion |
-| Antigravity / GitHub Copilot adapters | No plugin surface or evidence contract; explicit gap, not a support-table soft-pass |
+| Antigravity / GitHub Copilot adapters | No plugin surface or evidence contract; Copilot Lane B is parked; explicit gap, not a support-table soft-pass |
+| Live Claude Opus plan / ultracode fixture | Doctor reports `native_advisor_unverified` until a live Claude harness maps the native command surface |
 
 ## Sync policy (Project Factory FORK-MAINTENANCE)
 

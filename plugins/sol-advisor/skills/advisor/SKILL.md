@@ -32,5 +32,14 @@ configure still writes the pair and `doctor` reports
 profile exists) is the Sol / Ultra + Luna / High preset only—not the product
 identity.
 
+On Claude, prefer ultracode or the built-in advisor / Opus plan.
+`doctor --host claude` reports `code=native_advisor_unverified`,
+`diagnostics.seating=defer_to_native_when_present`, and `odwLane=disabled`.
+Do not overlay Sol-style plugin seating. Mapping the live Opus plan /
+ultracode surface is a follow-up; this scrub does not claim `nativeAdvisor=present`.
+
+ODW is not the default orchestrator on Claude, Codex ultra mode, or Cursor
+multitask.
+
 Configuration is not runtime proof. Do not call a lane strict unless `doctor`
 and the host-specific runtime acceptance both succeed.

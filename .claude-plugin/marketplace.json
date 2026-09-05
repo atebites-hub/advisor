@@ -6,7 +6,7 @@
       "name": "sol-advisor",
       "version": "0.9.3",
       "source": ".",
-      "description": "Experimental Claude Code detection; strict delegation disabled."
+      "description": "Prefer Claude native advisor/Opus plan (ultracode); experimental plugin detection; strict delegation disabled."
     }
   ]
 }

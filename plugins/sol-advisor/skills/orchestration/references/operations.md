@@ -4,25 +4,25 @@ This is the operator and maintainer reference. The GitHub repository is
 `atebites-hub/advisor`. The package ID remains `sol-advisor` so existing
 `sol-advisor@sol-advisor` installs keep upgrading. All user-facing surfaces
 are Advisor. Any catalog-backed advisor/grunt pair is valid; Sol / Ultra +
-Luna / High is one Codex default preset.
+Luna / High is one Codex default preset. Prefer each host's native
+orchestrator; ODW is optional fan-out, not the default.
 
 ## Host status
 
-| Host | Native | ODW | Gate |
-|---|---|---|---|
-| Codex CLI / ChatGPT Codex app | supported | supported | trusted hooks plus rollout evidence |
-| maintained ZCode fork | supported | supported | runtime 0.16.3 attestation plus plugin hooks |
-| Cursor IDE / Cursor CLI (`agent`) | disabled | disabled | first-class plugin and CLI install; native child effort and ODW host attestation are still missing; hook failures are fail-open |
-| Claude Code | disabled | disabled | resolved effort is not authoritative |
-| Grok Build | disabled | disabled | hook-handler failures are fail-open |
-| Grok Bot | excluded | excluded | outside product scope |
+| Host | Native orchestrator | Plugin seating | ODW | Gate |
+|---|---|---|---|---|
+| Codex CLI / ChatGPT Codex app | ultra mode first | supported after hooks | optional, not default | trusted hooks plus rollout evidence |
+| maintained ZCode fork | native Agent | supported | optional, not default | runtime 0.16.3 attestation plus plugin hooks |
+| Cursor IDE / Cursor CLI (`agent`) | multitask first (under-investigated) | disabled | disabled | first-class plugin and CLI install; native child effort and ODW host attestation are still missing; hook failures are fail-open |
+| Claude Code | ultracode / Opus plan first | defer to native; else guidance only | disabled | `doctor --host claude` reports `native_advisor_unverified`; resolved effort is not authoritative; do not overlay Sol-style seating |
+| Grok Build | none proven | disabled | disabled | hook-handler failures are fail-open |
+| Grok Bot | excluded | excluded | excluded | outside product scope |
 
-Antigravity and GitHub Copilot are deferred gaps with no adapter in this
-repository. Do not add them as support-table hosts until a contract exists.
+Antigravity and GitHub Copilot are deferred gaps (Copilot Lane B parked). Do
+not add them as support-table hosts until a contract exists.
 
 Configuration intent is never runtime proof. The GitHub About description is
-repository metadata; keep it Advisor-framed after the `sol-advisor` → `advisor`
-rename (manual Settings / `gh repo edit`).
+repository metadata; keep it Advisor-framed (manual Settings / `gh repo edit`).
 
 ## Cursor lifecycle
 

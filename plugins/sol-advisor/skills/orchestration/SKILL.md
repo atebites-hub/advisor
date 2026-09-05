@@ -54,9 +54,13 @@ Use only the host's configured grunt route, without per-spawn model or effort
 overrides. On Codex, preflight the generated `advisor_grunt` role and spawn it with
 `fork_turns=none`. On ZCode, use the native Agent path; the runtime must inherit the
 parent's persisted `lite` tuple, and keep it foreground so the parent hook can attest
-completion. On Cursor IDE and Cursor CLI, stay solo while `doctor --host cursor`
-reports `strict: false`. Do not delegate on Claude Code or Grok Build while their
-doctor status says strict delegation is disabled.
+completion. On Cursor IDE and Cursor CLI, prefer native multitask when the user is
+already using it; stay plugin-solo while `doctor --host cursor` reports
+`strict: false`. On Claude Code, detect the harness and defer to ultracode
+or the built-in advisor / Opus plan. Do not seat a Sol-style plugin grunt
+on Claude. Do not delegate on Grok Build while doctor says strict
+delegation is disabled. ODW is never the default orchestrator on Claude,
+Codex ultra mode, or Cursor multitask.
 
 Every packet contains OBJECTIVE, FILES AND OWNERSHIP, INTERFACES, CONSTRAINTS,
 VERIFICATION, RETURN, and IMPLEMENTATION REPORT. Treat the grunt's report as a claim:
@@ -64,8 +68,10 @@ inspect the actual diff or artifact and authoritative runtime evidence yourself.
 
 ## Open Dynamic Workflows
 
-ODW is an execution mechanism inside `delegate` or `audit`, never a fourth route. Use
-it only for scaled fanout or rerunnable orchestration. Pass the active workspace as
+ODW is an execution mechanism inside `delegate` or `audit`, never a fourth route and
+never the default orchestrator. Prefer ultracode (Claude), ultra mode (Codex), or
+multitask (Cursor). Use ODW only for scaled fanout, rerunnable orchestration, or
+multi-executor work those natives do not cover. Pass the active workspace as
 `cwd` and one immutable run policy matching the configured grunt. Raw model nodes,
 mixed routes, resume/cache, or unsupported hosts are invalid.
 
