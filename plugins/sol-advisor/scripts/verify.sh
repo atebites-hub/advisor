@@ -279,6 +279,13 @@ grep -Fq 'install/enable open-dynamic-workflows@0.3.0' "$plugin_dir/skills/orche
   fail "odw.md omits install/enable seating wording"
 grep -Fq 'apply --host zcode' "$plugin_dir/skills/orchestration/references/operations.md" ||
   fail "operations.md omits ZCode apply"
+grep -Fq 'hooks.state' "$plugin_dir/skills/orchestration/references/operations.md" ||
+  fail "operations.md omits Codex hooks.state doctor observation"
+grep -Fq -- '--dangerously-bypass-hook-trust' "$plugin_dir/skills/orchestration/references/operations.md" ||
+  fail "operations.md omits the hook-trust bypass prohibition"
+grep -Fq 'hooks.state' "$plugin_dir/bin/advisor" || fail "advisor helper does not observe Codex hooks.state"
+grep -Fq -- '--dangerously-bypass-hook-trust' "$plugin_dir/bin/advisor" &&
+  fail "advisor helper must not mention or pass --dangerously-bypass-hook-trust"
 for section in OBJECTIVE 'FILES AND OWNERSHIP' INTERFACES CONSTRAINTS VERIFICATION RETURN 'IMPLEMENTATION REPORT'; do
   grep -Fq "$section" "$plugin_dir/skills/orchestration/references/role-contracts.md" || fail "grunt packet omits $section"
 done

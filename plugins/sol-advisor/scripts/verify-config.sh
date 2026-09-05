@@ -36,8 +36,11 @@ jq -n '{models:[
   {slug:"custom/grunt",supported_reasoning_levels:[{effort:"medium"}]}
 ]}' > "$catalog"
 
+codex_home=$tmp_dir/codex-home
+mkdir -p "$codex_home"
 run_advisor() {
-  ADVISOR_CONFIG_HOME=$config_home ADVISOR_MODEL_CATALOG=$catalog ADVISOR_AGENT_DIR=$tmp_dir/agents sh "$advisor" "$@"
+  ADVISOR_CONFIG_HOME=$config_home ADVISOR_MODEL_CATALOG=$catalog ADVISOR_AGENT_DIR=$tmp_dir/agents \
+    CODEX_HOME=$codex_home sh "$advisor" "$@"
 }
 
 profile=$config_home/codex.json
@@ -94,6 +97,63 @@ printf '%s\n' "$doctor_json" | jq -e '
 ' >/dev/null || fail "doctor JSON is not the allowlisted schema"
 pass "doctor is read-only and reports independently validated tuples"
 
+# Codex hook trust is persisted under [hooks.state] as sha256 of the
+# NormalizedHookIdentity (event + matcher + command handler), not script bytes.
+# Vectors below are version_for_toml of the current packaged hooks.json commands.
+write_codex_config() {
+  cat > "$codex_home/config.toml"
+}
+doctor_hooks() {
+  run_advisor doctor --host codex --json || true
+}
+assert_doctor_hooks() {
+  label=$1 expected_observable=$2 expected_trusted=$3
+  json=$(doctor_hooks)
+  printf '%s\n' "$json" | jq -e --argjson observable "$expected_observable" --argjson trusted "$expected_trusted" '
+    .code == "activation_required" and .strict == false and
+    .checks.runtimeAttestation == {required:true,observed:false} and
+    .checks.hooks.configured == true and
+    .checks.hooks.trustObservable == $observable and
+    .checks.hooks.trusted == $trusted
+  ' >/dev/null || fail "Codex hook trust $label: expected observable=$expected_observable trusted=$expected_trusted"
+}
+
+write_codex_config <<'TOML'
+[model]
+# readable Codex config without hooks.state
+TOML
+assert_doctor_hooks "empty-hooks-state" true false
+
+write_codex_config <<'TOML'
+[hooks.state."sol-advisor@sol-advisor:hooks/hooks.json:session_start:0:0"]
+trusted_hash = "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+[hooks.state."sol-advisor@sol-advisor:hooks/hooks.json:pre_tool_use:0:0"]
+trusted_hash = "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+[hooks.state."sol-advisor@sol-advisor:hooks/hooks.json:subagent_start:0:0"]
+trusted_hash = "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+TOML
+assert_doctor_hooks "wrong-trusted-hash" true false
+
+write_codex_config <<'TOML'
+[hooks.state."sol-advisor@sol-advisor:hooks/hooks.json:session_start:0:0"]
+trusted_hash = "sha256:26ade51c64fb6db17b17ad11a0ebc5508f3f094a3319482a89da5ffb1a30dbab"
+[hooks.state."sol-advisor@sol-advisor:hooks/hooks.json:pre_tool_use:0:0"]
+trusted_hash = "sha256:5e7060c07cd2bd428a89a91d5debe67890e1041e00d765099890943785ef493c"
+TOML
+assert_doctor_hooks "incomplete-trusted-hash" true false
+
+write_codex_config <<'TOML'
+[hooks.state."sol-advisor@sol-advisor:hooks/hooks.json:session_start:0:0"]
+trusted_hash = "sha256:26ade51c64fb6db17b17ad11a0ebc5508f3f094a3319482a89da5ffb1a30dbab"
+[hooks.state."sol-advisor@sol-advisor:hooks/hooks.json:pre_tool_use:0:0"]
+trusted_hash = "sha256:5e7060c07cd2bd428a89a91d5debe67890e1041e00d765099890943785ef493c"
+[hooks.state."sol-advisor@sol-advisor:hooks/hooks.json:subagent_start:0:0"]
+trusted_hash = "sha256:2edaa564324068e366ee73f139e5629e3e032d9816abef4f97906494c93a9bb1"
+TOML
+assert_doctor_hooks "matching-trusted-hash" true true
+rm -f "$codex_home/config.toml"
+pass "doctor observes Codex hooks.state without soft-passing attestation"
+
 # Exercise odw_list_is_compatible from advisor without running the CLI.
 odw_plugin_id=open-dynamic-workflows@open-dynamic-workflows
 odw_required_version=0.3.0
@@ -148,16 +208,22 @@ for host_code in 'cursor runtime_effort_attestation_unavailable' 'claude native_
   jq -e --arg host "$1" --arg code "$2" '.host == $host and .code == $code and .strict == false' "$tmp_dir/$1.json" >/dev/null ||
     fail "$1 doctor used the wrong capability code"
 done
-jq -e '.diagnostics.enforcementHook == false and (.diagnostics.nativeGaps | type == "array") and (.diagnostics.odwGaps | type == "array")' \
-  "$tmp_dir/cursor.json" >/dev/null || fail "Cursor doctor omitted first-class diagnostics"
+jq -e '
+  .diagnostics.enforcementHook == false and (.diagnostics.nativeGaps | type == "array") and
+  (.diagnostics.odwGaps | type == "array") and
+  .checks.hooks.trustObservable == false and .checks.hooks.trusted == false
+' "$tmp_dir/cursor.json" >/dev/null || fail "Cursor doctor omitted first-class diagnostics"
 jq -e '
   .diagnostics.seating == "defer_to_native_when_present" and
   .diagnostics.nativeAdvisor == "unverified" and
   .diagnostics.nativeOrchestrator == "ultracode" and
   .diagnostics.pluginStrict == false and
   .diagnostics.odwDefault == false and
-  .odwLane == "disabled" and .nativeLane == "disabled"
+  .odwLane == "disabled" and .nativeLane == "disabled" and
+  .checks.hooks.trustObservable == false and .checks.hooks.trusted == false
 ' "$tmp_dir/claude.json" >/dev/null || fail "Claude doctor omitted native-first diagnostics"
+jq -e '.checks.hooks.trustObservable == false and .checks.hooks.trusted == false' \
+  "$tmp_dir/grok.json" >/dev/null || fail "Grok doctor invented hook trust"
 if run_advisor doctor --host grok-bot --json >/dev/null 2>&1; then fail "Grok Bot was not excluded"; fi
 pass "truthful Cursor Claude Grok and Grok Bot capability status"
 
