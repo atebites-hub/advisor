@@ -195,7 +195,8 @@ odw_list_is_compatible() {
   jq -e --arg id "$odw_plugin_id" --arg version "$odw_required_version" '
     def rows:
       [(.installed[]? | {id:(.pluginId // .id // ""), version:(.version // ""), enabled}),
-       (.installedPlugins[]? | {id:(.pluginId // .id // ""), version:(.version // ""), enabled})];
+       (.installedPlugins[]? | {id:(.pluginId // .id // ""), version:(.version // ""), enabled}),
+       (.plugins[]? | {id:(.pluginId // .id // ""), version:(.version // ""), enabled})];
     any(rows[]; .id == $id and .version == $version and .enabled == true)
   ' >/dev/null 2>&1
 }

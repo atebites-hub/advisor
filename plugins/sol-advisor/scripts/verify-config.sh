@@ -94,6 +94,33 @@ printf '%s\n' "$doctor_json" | jq -e '
 ' >/dev/null || fail "doctor JSON is not the allowlisted schema"
 pass "doctor is read-only and reports independently validated tuples"
 
+# Exercise odw_list_is_compatible from advisor without running the CLI.
+odw_plugin_id=open-dynamic-workflows@open-dynamic-workflows
+odw_required_version=0.3.0
+eval "$(sed -n '/^odw_list_is_compatible()/,/^}$/p' "$advisor")"
+assert_odw_list() {
+  label=$1 expected=$2 json=$3
+  if printf '%s\n' "$json" | odw_list_is_compatible; then
+    actual=true
+  else
+    actual=false
+  fi
+  [ "$actual" = "$expected" ] || fail "odw list $label: expected compatible=$expected got $actual"
+}
+assert_odw_list zcode-plugins-enabled true \
+  '{"plugins":[{"id":"open-dynamic-workflows@open-dynamic-workflows","version":"0.3.0","enabled":true}]}'
+assert_odw_list codex-installed true \
+  '{"installed":[{"pluginId":"open-dynamic-workflows@open-dynamic-workflows","version":"0.3.0","enabled":true}]}'
+assert_odw_list codex-installedPlugins true \
+  '{"installedPlugins":[{"pluginId":"open-dynamic-workflows@open-dynamic-workflows","version":"0.3.0","enabled":true}]}'
+assert_odw_list marketplace-twin false \
+  '{"plugins":[{"id":"open-dynamic-workflows@atebites-plugins","version":"0.3.0","enabled":true}]}'
+assert_odw_list zcode-disabled false \
+  '{"plugins":[{"id":"open-dynamic-workflows@open-dynamic-workflows","version":"0.3.0","enabled":false}]}'
+assert_odw_list zcode-wrong-version false \
+  '{"plugins":[{"id":"open-dynamic-workflows@open-dynamic-workflows","version":"0.2.0","enabled":true}]}'
+pass "odw list matcher accepts ZCode .plugins[] and Codex installed shapes"
+
 unsupported_home=$tmp_dir/unsupported
 if ADVISOR_CONFIG_HOME=$unsupported_home ADVISOR_MODEL_CATALOG=$catalog sh "$advisor" configure --host codex \
   --advisor-model missing/model --advisor-effort ultra \
