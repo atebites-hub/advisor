@@ -10,6 +10,7 @@ usage() {
     '  advisor configure --host codex --advisor-model MODEL --advisor-effort EFFORT --grunt-model MODEL --grunt-effort EFFORT' \
     '  advisor apply --host codex' \
     '  advisor doctor --host codex|zcode|grok|cursor|claude [--json]' \
+    '  configure accepts any catalog-backed advisor/grunt pair. Codex built-in default is the Sol/Ultra + Luna/High preset only.' \
     '  Cursor CLI is `agent` / `cursor-agent`. Doctor reports gaps; it does not enable delegation.' \
     '  advisor remove --host codex'
 }

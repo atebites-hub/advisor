@@ -1,7 +1,10 @@
 # Advisor operations
 
-This is the operator and maintainer reference. The package ID remains `sol-advisor`;
-all user-facing surfaces are Advisor.
+This is the operator and maintainer reference. The GitHub repository is
+`atebites-hub/advisor`. The package ID remains `sol-advisor` so existing
+`sol-advisor@sol-advisor` installs keep upgrading. All user-facing surfaces
+are Advisor. Any catalog-backed advisor/grunt pair is valid; Sol / Ultra +
+Luna / High is one Codex default preset.
 
 ## Host status
 
@@ -14,7 +17,12 @@ all user-facing surfaces are Advisor.
 | Grok Build | disabled | disabled | hook-handler failures are fail-open |
 | Grok Bot | excluded | excluded | outside product scope |
 
-Configuration intent is never runtime proof.
+Antigravity and GitHub Copilot are deferred gaps with no adapter in this
+repository. Do not add them as support-table hosts until a contract exists.
+
+Configuration intent is never runtime proof. The GitHub About description is
+repository metadata; keep it Advisor-framed after the `sol-advisor` → `advisor`
+rename (manual Settings / `gh repo edit`).
 
 ## Cursor lifecycle
 

@@ -25,5 +25,12 @@ doctor --host codex|zcode|grok|cursor|claude [--json]
 remove --host codex
 ```
 
+`configure` accepts any catalog-backed advisor/grunt pair. When a local Codex
+model catalog is present, both tuples must exist there; when it is absent,
+configure still writes the pair and `doctor` reports
+`model_capability_unverified`. The Codex built-in default (used when no
+profile exists) is the Sol / Ultra + Luna / High preset only—not the product
+identity.
+
 Configuration is not runtime proof. Do not call a lane strict unless `doctor`
 and the host-specific runtime acceptance both succeed.

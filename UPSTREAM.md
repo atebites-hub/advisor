@@ -12,14 +12,14 @@ it is still identical to upstream and the only path is a reviewable PR.
 
 | Remote | URL | Role |
 | --- | --- | --- |
-| `origin` | https://github.com/atebites-hub/sol-advisor.git | This fork (push / PRs) |
+| `origin` | https://github.com/atebites-hub/advisor.git | This fork (push / PRs). GitHub renamed the slug from `sol-advisor`; old URLs redirect. |
 | `upstream` | https://github.com/DannyMac180/sol-advisor.git | Parent (fetch only) |
 
 ```bash
-git remote add origin https://github.com/atebites-hub/sol-advisor.git   # if missing
+git remote add origin https://github.com/atebites-hub/advisor.git   # if missing
 git remote add upstream https://github.com/DannyMac180/sol-advisor.git  # if missing
 git remote -v
-# origin    https://github.com/atebites-hub/sol-advisor.git (fetch/push)
+# origin    https://github.com/atebites-hub/advisor.git (fetch/push)
 # upstream  https://github.com/DannyMac180/sol-advisor.git (fetch)
 ```
 
@@ -47,14 +47,16 @@ recording the deferral here.
 | Patch / behavior | Why we keep it | Conflict risk |
 | --- | --- | --- |
 | Cross-host Advisor (Cursor, ZCode, Claude Code, Grok) | Upstream is Codex-only; factory hosts need install, doctor, and truthful routing | **High** — README, skills, `verify.sh`, host packages |
+| Product name Advisor; Sol/Luna is one Codex preset | Upstream product identity is Sol-specific; factory copy and doctor treat any catalog-backed pair as valid | Medium — README, skills, helper usage |
+| Repo slug `atebites-hub/advisor` | GitHub renamed this fork; workflow `github.repository` and origin URL must match. Package id stays `sol-advisor` | Medium — README, workflows, homepage URLs |
 | First-class Cursor IDE / CLI plugin | `.cursor-plugin/`, `install-cursor.sh`, session context, doctor; strict delegation stays disabled | Medium — plugin manifests and Cursor hooks |
 | Isolated host plugin packages | Codex / ZCode / Cursor packages stay separate so one host cannot load another host's files | Medium — marketplace and package layout |
 | Packaged `advisor` helper + canonical paths | `$advisor` / `/advisor` run the in-repo helper; no PATH binary | Medium — `bin/advisor`, `find-helper.sh` |
 | ZCode runtime attestation + authoritative session IDs | Strict ZCode native / ODW lanes need observed role, model, effort, parent, completion | **High** — ZCode hooks and inspect scripts |
-| ODW Luna High routing + inspect-odw-run | Accept only fresh completed traces that match the immutable policy | Medium — ODW references and inspectors |
+| ODW inspect-odw-run (immutable policy) | Accept only fresh completed traces that match the immutable `{executor, model, reasoningEffort}` policy | Medium — ODW references and inspectors |
 | Automatic session activation | Inject orchestration contract at session start on supported hosts | Medium — hooks and prompt copy |
-| Luna High grunt enforcement / ordinary-tool continuity | One bounded grunt when useful; solo tools stay available outside Advisor routing | Medium — spawn guards and verifier isolation |
-| atebites-hub marketplace catalogs | Install origin is this fork, not `DannyMac180/sol-advisor` | Low — catalog JSON only |
+| Bounded grunt enforcement / ordinary-tool continuity | One bounded grunt when useful; solo tools stay available outside Advisor routing | Medium — spawn guards and verifier isolation |
+| atebites-hub marketplace catalogs | Install origin is this fork (`atebites-hub/advisor`), not `DannyMac180/sol-advisor` | Low — catalog JSON only |
 
 Do not bump [atebites-plugins](https://github.com/atebites-hub/atebites-plugins)
 pins in a sync PR. Marketplace pin bumps stay a separate change after fork CI
@@ -64,8 +66,10 @@ and smoke.
 
 | Item | Reason |
 | --- | --- |
-| atebites-plugins pin bumps | Separate PR after this fork's CI + smoke |
+| atebites-plugins pin / catalog cutover (`sol-advisor` → `advisor` paths) | Separate consumer PR after this fork lands; do not bump pins here |
+| Advisor as factory default | Superpowers remains the provisional factory pack |
 | Strict Cursor / Claude / Grok delegation | Hosts still cannot prove role, model, effort, parent, and completion |
+| Antigravity / GitHub Copilot adapters | No plugin surface or evidence contract; explicit gap, not a support-table soft-pass |
 
 ## Sync policy (Project Factory FORK-MAINTENANCE)
 
@@ -109,4 +113,5 @@ secret `UPSTREAM_SYNC_TOKEN` (Factory Plugins bot PAT with `contents` +
 - [ ] `sh plugins/sol-advisor/scripts/verify.sh` and `git diff --check`
 - [ ] This file’s last-synced SHA matches `upstream/main`
 - [ ] Fork still `fork: true` with parent `DannyMac180/sol-advisor`
+- [ ] Origin URL and workflow `github.repository` still `atebites-hub/advisor`
 - [ ] No marketplace pin bumps in the sync PR

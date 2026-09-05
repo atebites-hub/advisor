@@ -5,8 +5,12 @@ model. It delegates only bounded execution to a configured grunt, and accepts de
 work only when the host can prove the actual role, model, effort, parent, and completion
 state.
 
-The package coordinate stays `sol-advisor@sol-advisor` for upgrade compatibility; the
-product name is Advisor.
+The product name is **Advisor**. The GitHub repository is
+[`atebites-hub/advisor`](https://github.com/atebites-hub/advisor). The package
+coordinate stays `sol-advisor@sol-advisor` so existing installs keep upgrading.
+
+Any catalog-backed advisor/grunt pair is valid. GPT-5.6 Sol / Ultra + GPT-5.6 Luna /
+High is one Codex default **preset**, not the product identity.
 
 ## Support
 
@@ -19,26 +23,32 @@ product name is Advisor.
 | Grok Build | disabled | disabled | experimental detection; strict delegation disabled because hook failures are fail-open |
 | Grok Bot | excluded | excluded | excluded |
 
+Antigravity and GitHub Copilot are **deferred gaps**: this repository has no adapter,
+doctor host, or evidence contract for them. A missing row is not a soft pass.
+
+Advisor is not a factory default. Superpowers remains the provisional factory skill
+pack; enabling Advisor there is a separate consumer change.
+
 ## Install and start coding
 
 ### Codex CLI or ChatGPT Codex app
 
 ```sh
-codex plugin marketplace add atebites-hub/sol-advisor --ref main
+codex plugin marketplace add atebites-hub/advisor --ref main
 codex plugin add sol-advisor@sol-advisor
 ```
 
-In Codex, invoke `$advisor`. To accept the built-in Codex default—GPT-5.6 Sol / Ultra
-as advisor and GPT-5.6 Luna / High as grunt—apply it once:
-
-```text
-$advisor apply --host codex
-```
-
-Or configure and apply another catalog-backed pair:
+In Codex, invoke `$advisor`. Configure any catalog-backed pair, then apply it:
 
 ```text
 $advisor configure --host codex --advisor-model MODEL --advisor-effort EFFORT --grunt-model MODEL --grunt-effort EFFORT
+$advisor apply --host codex
+```
+
+To accept the built-in Codex preset—GPT-5.6 Sol / Ultra as advisor and GPT-5.6 Luna /
+High as grunt—apply it once without writing a profile:
+
+```text
 $advisor apply --host codex
 ```
 
@@ -61,7 +71,7 @@ generated role, valid profile, and validated Advisor session snapshots.
 ### ZCode
 
 ```sh
-zcode plugins marketplace add atebites-hub/sol-advisor
+zcode plugins marketplace add atebites-hub/advisor
 zcode plugins install sol-advisor@sol-advisor
 ```
 
@@ -88,8 +98,8 @@ entrypoints.
 **Local plugin (IDE + CLI, no Customize required for CLI):**
 
 ```sh
-git clone https://github.com/atebites-hub/sol-advisor.git
-cd sol-advisor
+git clone https://github.com/atebites-hub/advisor.git
+cd advisor
 sh plugins/sol-advisor/scripts/install-cursor.sh
 ```
 
@@ -105,7 +115,7 @@ agent --plugin-dir "$HOME/.cursor/plugins/local/sol-advisor"
 From a checkout without installing locally:
 
 ```sh
-agent --plugin-dir /path/to/sol-advisor
+agent --plugin-dir /path/to/advisor
 ```
 
 Team marketplace installs use `.cursor-plugin/marketplace.json` (official Cursor
@@ -154,6 +164,28 @@ diagnostics only. Their current runtimes cannot prove the identical strict
 contract, so Advisor refuses delegation instead of treating requested settings
 as runtime evidence.
 
+## Upgrade from `atebites-hub/sol-advisor`
+
+GitHub renamed this fork to [`atebites-hub/advisor`](https://github.com/atebites-hub/advisor).
+`https://github.com/atebites-hub/sol-advisor` redirects. The parent remains
+[DannyMac180/sol-advisor](https://github.com/DannyMac180/sol-advisor); this is
+still a true fork.
+
+| Surface | After rename | Why it stayed |
+|---|---|---|
+| Marketplace add | `atebites-hub/advisor` | repo slug |
+| Plugin / package id | `sol-advisor@sol-advisor` | Codex, ZCode options key, and Cursor local path `~/.cursor/plugins/local/sol-advisor` would break if renamed here |
+| Display name | Advisor | product identity |
+| atebites-plugins pins / catalog paths | unchanged in this PR | consumer cutover is a separate Factory Plugins change |
+
+Keep using `$advisor`, `/advisor`, and `$sol-advisor:advisor`. Do not look for a
+PATH `advisor` binary. Old marketplace add commands that still say
+`atebites-hub/sol-advisor` usually work via redirect; prefer the new slug.
+
+The GitHub About description is repository metadata, not a file in this tree.
+Update it in repo Settings (or `gh repo edit --description`) to Advisor framing;
+the inherited Sol/Luna/Terra Codex-native text is stale.
+
 ## Open Dynamic Workflows
 
 With `open-dynamic-workflows` 0.3.0 installed, Advisor may choose ODW for scaled or
@@ -184,4 +216,4 @@ host contracts, runtime evidence, migrations, and release acceptance.
 
 ## Go deeper
 
-I write [**Attention Heads**](https://attentionheads.substack.com/?utm_source=github&utm_medium=readme&utm_campaign=sol-advisor) — deep, evidence-backed writing on AI, cognition, and agentic engineering. The **Agentic Engineering Field Notes** series is where I publish practical advice on the craft of using AI. [Subscribe](https://attentionheads.substack.com/subscribe?utm_source=github&utm_medium=readme&utm_campaign=sol-advisor) to get new posts to your inbox.
+I write [**Attention Heads**](https://attentionheads.substack.com/?utm_source=github&utm_medium=readme&utm_campaign=advisor) — deep, evidence-backed writing on AI, cognition, and agentic engineering. The **Agentic Engineering Field Notes** series is where I publish practical advice on the craft of using AI. [Subscribe](https://attentionheads.substack.com/subscribe?utm_source=github&utm_medium=readme&utm_campaign=advisor) to get new posts to your inbox.

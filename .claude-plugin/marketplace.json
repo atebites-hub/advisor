@@ -1,6 +1,6 @@
 {
   "name": "sol-advisor",
-  "owner": {"name": "atebites-hub", "url": "https://github.com/atebites-hub/sol-advisor"},
+  "owner": {"name": "atebites-hub", "url": "https://github.com/atebites-hub/advisor"},
   "plugins": [
     {
       "name": "sol-advisor",

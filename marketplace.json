@@ -1,7 +1,7 @@
 {
   "name": "sol-advisor",
-  "description": "Advisor model routing for supported coding hosts.",
-  "owner": {"name": "atebites-hub", "url": "https://github.com/atebites-hub/sol-advisor"},
+  "description": "Advisor: catalog-backed advisor/grunt routing for supported coding hosts.",
+  "owner": {"name": "atebites-hub", "url": "https://github.com/atebites-hub/advisor"},
   "plugins": [
     {
       "name": "sol-advisor",

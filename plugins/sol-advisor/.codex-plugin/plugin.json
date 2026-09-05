@@ -3,8 +3,8 @@
   "version": "0.9.3",
   "description": "Configurable advisor/grunt routing with strict Codex and ZCode runtime evidence.",
   "author": {"name": "Daniel McAteer", "url": "https://github.com/DannyMac180"},
-  "homepage": "https://github.com/atebites-hub/sol-advisor#readme",
-  "repository": "https://github.com/atebites-hub/sol-advisor",
+  "homepage": "https://github.com/atebites-hub/advisor#readme",
+  "repository": "https://github.com/atebites-hub/advisor",
   "license": "MIT",
   "keywords": ["codex", "orchestration", "multi-agent", "gpt-5.6"],
   "skills": "./skills/",
@@ -15,7 +15,7 @@
     "developerName": "Daniel McAteer",
     "category": "Productivity",
     "capabilities": ["Interactive", "Write", "Lifecycle hooks"],
-    "websiteURL": "https://github.com/atebites-hub/sol-advisor",
+    "websiteURL": "https://github.com/atebites-hub/advisor",
     "defaultPrompt": [
       "Build and verify this feature with automatic Advisor routing.",
       "Keep judgment and final review in the configured advisor; use only runtime-proven grunt execution."

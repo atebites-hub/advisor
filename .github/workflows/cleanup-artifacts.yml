@@ -10,12 +10,12 @@ permissions:
   actions: write
 
 concurrency:
-  group: sol-advisor-cleanup-artifacts
+  group: advisor-cleanup-artifacts
   cancel-in-progress: false
 
 jobs:
   cleanup:
-    if: github.repository == 'atebites-hub/sol-advisor'
+    if: github.repository == 'atebites-hub/advisor'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
