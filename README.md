@@ -184,7 +184,7 @@ PATH `advisor` binary. Old marketplace add commands that still say
 
 The GitHub About description is repository metadata, not a file in this tree.
 Update it in repo Settings (or `gh repo edit --description`) to Advisor framing;
-the inherited Sol/Luna/Terra Codex-native text is stale.
+the inherited Codex-native About text is stale.
 
 ## Open Dynamic Workflows
 
