@@ -124,6 +124,119 @@ require_catalog_tuples() {
   fi
 }
 
+resolve_codex_config_file() {
+  if [ -n "${CODEX_HOME-}" ]; then
+    codex_home=$CODEX_HOME
+  elif [ -n "${HOME-}" ]; then
+    codex_home=$HOME/.codex
+  else
+    return 1
+  fi
+  case "$codex_home" in /*) ;; *) codex_home=$(pwd -P)/$codex_home ;; esac
+  case "$codex_home" in /|//) return 1 ;; esac
+  check_codex_config=$codex_home/config.toml
+  [ -f "$check_codex_config" ] && [ ! -L "$check_codex_config" ] && [ -r "$check_codex_config" ]
+}
+
+# Observe Codex hooks.state. Trust hashes are version_for_toml of Codex's
+# NormalizedHookIdentity (event, matcher, command handler), not script bytes.
+# Missing python3 or an unreadable config stays unobservable; never invent trusted=true.
+observe_codex_hook_trust() {
+  check_hook_trust_observable=false
+  check_hooks_trusted=false
+  command -v python3 >/dev/null 2>&1 || return 0
+  resolve_codex_config_file || return 0
+  trust_json=$(python3 - "$check_codex_config" "$plugin_dir/hooks/hooks.json" <<'PY'
+import hashlib
+import json
+import sys
+import tomllib
+
+def canonical(value):
+    if isinstance(value, dict):
+        return {key: canonical(value[key]) for key in sorted(value)}
+    if isinstance(value, list):
+        return [canonical(item) for item in value]
+    return value
+
+def version_for_identity(value):
+    blob = json.dumps(canonical(value), separators=(",", ":"), ensure_ascii=True)
+    return "sha256:" + hashlib.sha256(blob.encode("ascii")).hexdigest()
+
+def normalize_timeout(raw):
+    timeout = 600 if raw is None else int(raw)
+    return timeout if timeout >= 1 else 1
+
+EVENT_LABELS = {
+    "SessionStart": "session_start",
+    "PreToolUse": "pre_tool_use",
+    "SubagentStart": "subagent_start",
+}
+
+def current_hashes(hooks_path):
+    with open(hooks_path, encoding="utf-8") as handle:
+        spec = json.load(handle)
+    hooks = spec["hooks"]
+    hashes = {}
+    for event, label in EVENT_LABELS.items():
+        group = hooks[event][0]
+        handler = group["hooks"][0]
+        if handler.get("type") != "command":
+            return {}
+        matcher = group.get("matcher")
+        if not isinstance(matcher, str) or not matcher:
+            return {}
+        command = handler.get("command")
+        status = handler.get("statusMessage")
+        if not isinstance(command, str) or not isinstance(status, str):
+            return {}
+        key = "sol-advisor@sol-advisor:hooks/hooks.json:%s:0:0" % label
+        hashes[key] = version_for_identity({
+            "event_name": label,
+            "matcher": matcher,
+            "hooks": [{
+                "async": False,
+                "command": command,
+                "statusMessage": status,
+                "timeout": normalize_timeout(handler.get("timeout")),
+                "type": "command",
+            }],
+        })
+    return hashes
+
+def hooks_state(config_path):
+    with open(config_path, "rb") as handle:
+        data = tomllib.load(handle)
+    hooks = data.get("hooks")
+    if not isinstance(hooks, dict):
+        return {}
+    state = hooks.get("state")
+    return state if isinstance(state, dict) else {}
+
+config_path, hooks_path = sys.argv[1], sys.argv[2]
+try:
+    state = hooks_state(config_path)
+except Exception:
+    json.dump({"trustObservable": False, "trusted": False}, sys.stdout)
+    raise SystemExit(0)
+try:
+    expected = current_hashes(hooks_path)
+except Exception:
+    expected = {}
+trusted = bool(expected) and all(
+    isinstance(state.get(key), dict) and state[key].get("trusted_hash") == digest
+    for key, digest in expected.items()
+)
+json.dump({"trustObservable": True, "trusted": trusted}, sys.stdout)
+PY
+) || return 0
+  printf '%s\n' "$trust_json" | jq -e '
+    type == "object" and (.trustObservable | type == "boolean") and (.trusted | type == "boolean")
+  ' >/dev/null 2>&1 || return 0
+  check_hook_trust_observable=$(printf '%s\n' "$trust_json" | jq -r '.trustObservable')
+  check_hooks_trusted=$(printf '%s\n' "$trust_json" | jq -r '.trusted')
+}
+
 resolve_zcode_config() {
   if [ -n "${ZCODE_CONFIG-}" ]; then
     zcode_config=$ZCODE_CONFIG
@@ -389,6 +502,7 @@ probe_host() {
   done
   if [ "$1" = codex ]; then
     [ -f "$plugin_dir/hooks/hooks.json" ] && [ -f "$plugin_dir/hooks/enforce-codex.sh" ] && [ -f "$plugin_dir/hooks/session-context.sh" ] && check_hooks_configured=true
+    observe_codex_hook_trust
     if sh "$installer" --profile "$profile" --check --check-role grunt >/dev/null 2>&1; then check_files_current=true; fi
     if [ "$check_cli_present" = true ] && plugin_list=$(codex plugin list --json 2>/dev/null); then
       if printf '%s\n' "$plugin_list" | odw_list_is_compatible; then
