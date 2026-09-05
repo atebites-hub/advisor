@@ -169,6 +169,11 @@ advisor still inspects the real output, reruns verification, and renders the ver
 
 ## Maintainers
 
+This repository is a true GitHub fork of
+[DannyMac180/sol-advisor](https://github.com/DannyMac180/sol-advisor). Remotes,
+last-synced tip, factory divergence, and weekday sync are in
+[UPSTREAM.md](UPSTREAM.md).
+
 ```sh
 sh plugins/sol-advisor/scripts/verify.sh
 git diff --check
