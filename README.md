@@ -17,15 +17,20 @@ High is one Codex default **preset**, not the product identity.
 
 | Host | Native orchestration | Plugin Advisor seating | ODW |
 |---|---|---|---|
-| Codex CLI / ChatGPT Codex app | **ultra mode first** | strict `advisor_grunt` after hook trust and live rollout evidence | optional; not the default orchestrator |
-| ZCode | persisted `main` / `lite` plus runtime attestation | strict on the maintained fork after live attestation | optional; supported after the same evidence contract |
-| Cursor IDE / Cursor CLI (`agent`) | **multitask first** (under-investigated) | first-class plugin, commands, CLI install, and doctor; strict seating disabled | not default; refused until runtime evidence can prove role, model, effort, parent, and completion |
-| Claude Code | **ultracode / Opus plan first** when present | defer to that native path; else plugin guidance only. Never overlay Sol-style strict seating | not default; rejected |
+| Codex CLI / ChatGPT Codex app | **ultra mode first** when that is the right tool | strict `advisor_grunt` after hook trust and live rollout evidence | **must align** with ultra (detect, do not fight, compose or defer); executor optional after inspect; alignment unproven |
+| ZCode | persisted `main` / `lite` plus runtime attestation | strict on the maintained fork after live attestation | **must align** with native Agent; executor optional after the same evidence contract |
+| Cursor IDE / Cursor CLI (`agent`) | **multitask first** when that is the right tool | first-class plugin, commands, CLI install, and doctor; strict seating disabled | **must align** with multitask; executor refused until evidence; investigation is alignment, not “ODW unused” |
+| Claude Code | **ultracode / Opus plan first** when present and that is the right tool | defer to that native path; else plugin guidance only. Never overlay Sol-style strict seating | **must align** with ultracode; executor rejected; alignment unproven |
 | Grok Build | none proven | experimental detection; strict delegation disabled because hook failures are fail-open | rejected |
 | Grok Bot | excluded | excluded | excluded |
 
-Native orchestration is preferred. ODW is for multi-executor / harness-agnostic
-fan-out that those natives do not cover. See [Native-first vs ODW](#native-first-vs-odw).
+Native-first **with ODW alignment required**. Prefer ultracode (Claude),
+ultra (Codex / ChatGPT), or multitask (Cursor) when that specialty path is
+the right tool. Native-first does **not** mean skip ODW on those hosts.
+ODW must detect those modes, not fight them, document how it seats or
+composes (or explicitly defers), and fill cross-executor / multi-harness
+gaps natives do not cover. Alignment is required design; status is
+unproven until live fixtures and QA. See [Native-first vs ODW](#native-first-vs-odw).
 
 Antigravity and GitHub Copilot are **deferred gaps** (Copilot Lane B is parked).
 This repository has no adapter, doctor host, or evidence contract for them. A
@@ -36,17 +41,27 @@ pack; enabling Advisor there is a separate consumer change.
 
 ## Native-first vs ODW
 
-| Host | Use this native path | Use ODW only when |
-|---|---|---|
-| Claude Code | ultracode, or Claude's built-in advisor / Opus plan | multi-executor or harness-agnostic fan-out the native path cannot cover |
-| ChatGPT / Codex | ultra mode | same |
-| Cursor | multitask (needs a better live investigation before we treat it as proven) | same |
-| ZCode | native Agent with persisted `lite` attestation | scaled or rerunnable work that already satisfies the ODW inspector |
+**Native-first with ODW alignment required.** Prefer the host specialty
+orchestrator when that is the right tool. That preference does **not**
+mean skip ODW on Claude, Codex, or Cursor.
 
-`$advisor doctor` never treats ODW as required, and never reports `strict: true`
-from ODW being installed. Codex and ZCode may accept an ODW run after
-`inspect-odw-run.sh` proves a fresh completed trace. Claude, Cursor, and Grok
-stay ODW-disabled.
+| Host | Prefer this native path | ODW alignment (required; unproven) |
+|---|---|---|
+| Claude Code | ultracode, or Claude's built-in advisor / Opus plan | Detect ultracode; do not fight it. Document how ODW seats or composes with it, or explicitly defer. Fill cross-executor / multi-harness gaps natives do not cover. |
+| ChatGPT / Codex | ultra mode | Same with ultra: detect, do not fight, compose or defer, fill native gaps. |
+| Cursor | multitask | Same with multitask. The live investigation is this **alignment**, not a soft-green “ODW unused.” |
+| ZCode | native Agent with persisted `lite` attestation | Compose with persisted `lite` attestation; use ODW for scaled or rerunnable work the inspector already accepts. |
+
+Alignment is **required design**. Status is **unproven** until live fixtures
+and QA exist. Doctor must not treat missing ODW, unused ODW, or native-mode
+preference as proof of alignment.
+
+`$advisor doctor` never treats ODW as the default orchestrator and never
+reports `strict: true` from ODW being installed. That is not a pass on
+alignment. Codex and ZCode may accept an ODW run after
+`inspect-odw-run.sh` proves a fresh completed trace. Claude and Cursor stay
+rejected ODW **executors** until their evidence contracts exist; Grok stays
+ODW-disabled. Executor refusal is not a soft-green “ODW unused.”
 
 ## Install and start coding
 
@@ -57,9 +72,10 @@ codex plugin marketplace add atebites-hub/advisor --ref main
 codex plugin add sol-advisor@sol-advisor
 ```
 
-In Codex, invoke `$advisor`. Prefer ultra mode for ordinary orchestration.
-Configure any catalog-backed pair, then apply it when you want plugin grunt
-seating:
+In Codex, invoke `$advisor`. Prefer ultra mode for ordinary orchestration
+when that is the right tool. ODW must still align with ultra (detect, do
+not fight, compose or defer); that alignment is unproven. Configure any
+catalog-backed pair, then apply it when you want plugin grunt seating:
 
 ```text
 $advisor configure --host codex --advisor-model MODEL --advisor-effort EFFORT --grunt-model MODEL --grunt-effort EFFORT
@@ -116,9 +132,10 @@ Install the repository as a Cursor plugin. The package coordinate stays
 executable to your shell `PATH`; `/advisor` and the packaged helper are the
 entrypoints.
 
-Prefer Cursor **multitask** for native fan-out. That surface still needs a
-better live investigation before Advisor will treat it as proven seating.
-Strict plugin delegation stays disabled.
+Prefer Cursor **multitask** when that is the right native fan-out tool.
+The live investigation is how ODW **aligns** with multitask (detect,
+compose, or explicitly defer)—not a soft-green “ODW unused.” Alignment is
+required design and unproven. Strict plugin delegation stays disabled.
 
 **Local plugin (IDE + CLI, no Customize required for CLI):**
 
@@ -176,7 +193,9 @@ agent mcp list-tools open-dynamic-workflows
 Start a fresh Agent session after install. `sessionStart` injects the
 orchestration contract as additional context in the IDE and in CLI plugin
 sessions. Stay in `solo` unless Cursor multitask is already doing the fan-out.
-Do not enable fail-open plugin delegation.
+If ODW is also in play, it must align with multitask rather than compete
+with it. Do not enable fail-open plugin delegation. Alignment remains
+unproven until live fixtures and QA.
 
 ### Claude Code
 
@@ -184,8 +203,14 @@ Install this repository through the Claude plugin marketplace and invoke the
 installed `advisor` skill for diagnostics only.
 
 Claude already has a built-in advisor / Opus plan path (**ultracode**). Detect
-that harness and **defer to it**. Do not seat a Sol-style plugin advisor/grunt
-pair as if Claude had none.
+that harness and **defer to it** for specialty orchestration when it is the
+right tool. Do not seat a Sol-style plugin advisor/grunt pair as if Claude
+had none.
+
+Native-first does **not** skip ODW alignment. ODW must still detect
+ultracode, not fight it, and document how it seats, composes, or explicitly
+defers. That alignment is required design and unproven until live fixtures
+and QA. Claude remains a rejected ODW **executor**.
 
 ```text
 $advisor doctor --host claude --json
@@ -194,7 +219,8 @@ $advisor doctor --host claude --json
 Doctor is honest and fail-closed:
 
 - `strict` is always `false`
-- `odwLane` is `disabled` (ODW is not Claude's default orchestrator)
+- `odwLane` is `disabled` (ODW is not Claude's default orchestrator; this is
+  not a pass on alignment)
 - `code` is `native_advisor_unverified` until a live Claude fixture maps the
   Opus plan / ultracode command surface
 - `diagnostics.seating` is `defer_to_native_when_present`
@@ -229,9 +255,13 @@ the inherited Codex-native About text is stale.
 ## Open Dynamic Workflows
 
 With `open-dynamic-workflows` 0.3.0 installed, Advisor may choose ODW for
-**scaled or rerunnable multi-executor work that native orchestration does not
-cover**. It is not the default orchestrator on Claude (ultracode), Codex
-(ultra mode), or Cursor (multitask).
+**scaled or rerunnable multi-executor / multi-harness work that native
+orchestration does not cover**. Prefer ultracode (Claude), ultra mode
+(Codex), or multitask (Cursor) when those are the right tool. ODW must
+still **align** with those modes: detect them, do not fight them, and
+document how it seats or composes (or explicitly defers). Alignment is
+required design and unproven until live fixtures and QA. Unused ODW is
+not a soft-green pass.
 
 When ODW is used, Advisor passes one immutable
 `{executor, model, reasoningEffort}` policy, rejects node conflicts before

@@ -12,8 +12,8 @@ usage() {
     '  advisor doctor --host codex|zcode|grok|cursor|claude [--json]' \
     '  configure accepts any catalog-backed advisor/grunt pair. Codex built-in default is the Sol/Ultra + Luna/High preset only.' \
     '  Cursor CLI is `agent` / `cursor-agent`. Doctor reports gaps; it does not enable delegation.' \
-    '  Claude: prefer ultracode / Opus plan; doctor defers to that native path and never enables plugin-strict seating.' \
-    '  ODW is not the default orchestrator on Claude, Codex ultra mode, or Cursor multitask.' \
+    '  Claude: prefer ultracode / Opus plan when that is the right tool; doctor defers to that native path (`nativeAdvisor=unverified`) and never enables plugin-strict seating.' \
+    '  Native-first with ODW alignment required: detect ultracode / Codex ultra / Cursor multitask, do not fight them, compose or explicitly defer. Alignment is unproven; unused ODW is not a pass.' \
     '  advisor remove --host codex'
 }
 
