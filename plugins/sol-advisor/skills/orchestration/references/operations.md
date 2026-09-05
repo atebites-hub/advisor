@@ -112,11 +112,12 @@ completed lifecycle.
 After install or any hook change, review and trust all Advisor hooks in `/hooks` and
 start a fresh session. Disabled, untrusted, crashed, timed-out, malformed, or bypassed
 hooks mean the lane is unsupported. `doctor --host codex` now observes Codex
-`hooks.state` in `$CODEX_HOME/config.toml` (default `~/.codex/config.toml`). It sets
+`hooks.state` in `$CODEX_HOME/config.toml` (default `~/.codex/config.toml`) using
+local `python3` (`tomllib`). It sets
 `checks.hooks.trustObservable=true` when that table is readable and `trusted=true`
 only when the three Advisor keys have `trusted_hash` values that match Codex's
 normalized hook-identity SHA-256 (event, matcher, and command handler — not raw
-script bytes). UI trust stays user-gated. Doctor never passes
+script bytes). If `python3` is missing, both flags stay false. UI trust stays user-gated. Doctor never passes
 `--dangerously-bypass-hook-trust` and never treats hook trust as runtime
 attestation; `activation_required` can still hold after trust. ZCode and other
 hosts have no equivalent observable trust surface, so those flags stay false.
