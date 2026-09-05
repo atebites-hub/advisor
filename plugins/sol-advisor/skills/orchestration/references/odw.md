@@ -36,7 +36,13 @@ before one-leaf seating smoke:
 
 ```sh
 git submodule update --init plugins/open-dynamic-workflows
-sh plugins/sol-advisor/scripts/smoke-odw-one-leaf.sh --host zcode
+```
+
+One-leaf smoke does not auto-launch a run. Launch a one-leaf ODW
+`workflow()` first, then re-run:
+
+```sh
+sh plugins/sol-advisor/scripts/smoke-odw-one-leaf.sh --host zcode --run-dir /absolute/.odw/.../runs/run-ID
 ```
 
 The smoke script is fail-closed: missing checkout, wrong version,

@@ -218,6 +218,13 @@ grep -Fq 'git submodule update --init plugins/open-dynamic-workflows' "$repo_dir
 grep -Fq 'git submodule update --init plugins/open-dynamic-workflows' "$script_dir/smoke-odw-one-leaf.sh" ||
   fail "one-leaf smoke omits the exact submodule init command"
 grep -Fq 'Does not soft-pass' "$script_dir/smoke-odw-one-leaf.sh" || fail "one-leaf smoke omits fail-closed wording"
+grep -Fq 'does not auto-launch a run' "$script_dir/smoke-odw-one-leaf.sh" || fail "one-leaf smoke omits that it does not auto-launch"
+grep -Fq 'does not auto-launch a run' "$repo_dir/README.md" || fail "README omits that one-leaf smoke does not auto-launch"
+grep -Fq -- '--run-dir /absolute/.odw/.../runs/run-ID' "$repo_dir/README.md" || fail "README omits one-leaf --run-dir path"
+grep -Fq -- '--run-dir /absolute/.odw/.../runs/run-ID' "$plugin_dir/skills/orchestration/references/odw.md" ||
+  fail "odw.md omits one-leaf --run-dir path"
+grep -Fq -- '--run-dir /absolute/.odw/.../runs/run-ID' "$plugin_dir/skills/orchestration/references/operations.md" ||
+  fail "operations.md omits one-leaf --run-dir path"
 grep -Fq 'Antigravity' "$repo_dir/README.md" && grep -Fq 'Copilot' "$repo_dir/README.md" && grep -Fq 'Lane B' "$repo_dir/README.md" ||
   fail "README omits Antigravity/Copilot deferred gaps"
 if rg -n '^\| *Antigravity|^\| *GitHub Copilot|^\| *Copilot' "$repo_dir/README.md"; then
