@@ -171,9 +171,9 @@ The installed `advisor` skill resolves `../../bin/advisor`; no executable is exp
 to `PATH`. Cursor commands resolve the same helper through `CURSOR_PLUGIN_ROOT`,
 `PLUGIN_ROOT`, or `~/.cursor/plugins/local/sol-advisor`. `configure` and `apply`
 write Codex-owned Advisor state (`--host codex`) or ZCode plugin settings
-(`--host zcode`, `~/.zcode/cli/config.json` or `ZCODE_CONFIG`). ZCode apply
-uses the Sol / Ultra + Luna / High factory preset when those four settings
-are empty; configure writes any catalog-backed pair. Neither command rewrites
+(`apply --host zcode` / `configure --host zcode`, `~/.zcode/cli/config.json`
+or `ZCODE_CONFIG`). ZCode apply uses the Sol / Ultra + Luna / High factory
+preset when those four settings are empty; configure writes any catalog-backed pair. Neither command rewrites
 host model or provider credentials. `doctor` is read-only and reports
 capability gates independently, including
 `odwPlugin.installHint=install/enable open-dynamic-workflows@0.3.0` when

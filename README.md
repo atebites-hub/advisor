@@ -275,9 +275,8 @@ the inherited Codex-native About text is stale.
 `doctor --host codex|zcode` reports `checks.odwPlugin.compatible=true` only
 when `open-dynamic-workflows@open-dynamic-workflows` is **installed and
 enabled at version 0.3.0** on that host. A marketplace `package.json` at
-0.3.0 is not enough. If `compatible` is false, **install/enable
-`open-dynamic-workflows@0.3.0`** on Codex or ZCode; doctor prints that
-hint instead of only `compatible=false`.
+0.3.0 is not enough. If `compatible` is false, install/enable open-dynamic-workflows@0.3.0
+on Codex or ZCode; doctor prints that hint instead of only `compatible=false`.
 
 From a marketplace/box checkout, one-leaf seating smoke (fail-closed; does
 not soft-pass):

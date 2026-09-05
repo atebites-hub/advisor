@@ -28,7 +28,7 @@ Require the enabled `open-dynamic-workflows@open-dynamic-workflows` plugin at ex
 version 0.3.0 on the Codex or ZCode host. `doctor` reports
 `odwPlugin.compatible=true` only for that installed+enabled state. A marketplace
 `package.json` at 0.3.0 is not enough; if `compatible` is false,
-install/enable `open-dynamic-workflows@0.3.0`. Other versions are unverified.
+install/enable open-dynamic-workflows@0.3.0. Other versions are unverified.
 Do not edit ODW or its installed cache to satisfy this check.
 
 If the box checkout lacks `plugins/open-dynamic-workflows`, initialize it
