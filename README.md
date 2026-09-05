@@ -278,13 +278,16 @@ enabled at version 0.3.0** on that host. A marketplace `package.json` at
 0.3.0 is not enough. If `compatible` is false, install/enable open-dynamic-workflows@0.3.0
 on Codex or ZCode; doctor prints that hint instead of only `compatible=false`.
 
-From a marketplace/box checkout, one-leaf seating smoke (fail-closed; does
-not soft-pass):
+From a marketplace/box checkout, one-leaf seating is session-gated and
+fail-closed; it does not soft-pass. Smoke does not auto-launch a run.
+Launch a one-leaf ODW `workflow()` first (MCP or equivalent host path),
+then inspect or smoke that run:
 
 ```sh
-sh plugins/sol-advisor/scripts/smoke-odw-one-leaf.sh --host zcode
+sh plugins/sol-advisor/scripts/inspect-odw-run.sh --host zcode /absolute/.odw/.../runs/run-ID
+sh plugins/sol-advisor/scripts/smoke-odw-one-leaf.sh --host zcode --run-dir /absolute/.odw/.../runs/run-ID
 # or, when Advisor is the atebites-plugins submodule:
-# sh plugins/advisor/plugins/sol-advisor/scripts/smoke-odw-one-leaf.sh --host zcode
+# sh plugins/advisor/plugins/sol-advisor/scripts/smoke-odw-one-leaf.sh --host zcode --run-dir /absolute/.odw/.../runs/run-ID
 ```
 
 If the ODW checkout is missing, that script prints exactly:

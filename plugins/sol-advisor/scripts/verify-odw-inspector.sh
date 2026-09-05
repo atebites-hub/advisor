@@ -110,6 +110,14 @@ must_fail "unsupported Grok ODW host" sh "$inspector" --host grok "$zcode_run"
 pass "fingerprint route cache runtime failure and unsupported-host denials"
 
 [ -x "$smoke" ] || fail "one-leaf smoke is not executable: $smoke"
+sh "$smoke" --help >"$tmp/smoke-help.out"
+grep -Fq 'Does not soft-pass' "$tmp/smoke-help.out" || fail "smoke --help omitted fail-closed wording"
+grep -Fq 'does not auto-launch a run' "$tmp/smoke-help.out" || fail "smoke --help omitted that it does not auto-launch"
+grep -Fq -- '--run-dir /absolute/.odw/.../runs/run-ID' "$tmp/smoke-help.out" ||
+  fail "smoke --help omitted launch-then --run-dir path"
+grep -Fq 'Session-gated' "$tmp/smoke-help.out" || fail "smoke --help omitted session-gated wording"
+grep -Fq 'inspect-odw-run.sh' "$tmp/smoke-help.out" || fail "smoke --help omitted inspect-odw-run.sh"
+pass "one-leaf smoke --help documents launch-then --run-dir and stays fail-closed"
 box=$tmp/box
 mkdir -p "$box"
 if (CDPATH= cd "$box" && sh "$smoke" --host zcode) >"$tmp/smoke-missing.out" 2>"$tmp/smoke-missing.err"; then

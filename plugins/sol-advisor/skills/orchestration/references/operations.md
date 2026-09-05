@@ -181,10 +181,13 @@ capability gates independently, including
 enabled at 0.3.0 on Codex or ZCode. `remove --host codex` is the explicit
 pre-uninstall cleanup and refuses any state it cannot prove Advisor owns.
 
-QA one-leaf seating after the box ODW submodule exists:
+QA one-leaf seating after the box ODW submodule exists. Seating is
+session-gated and does not auto-launch a run. Launch a one-leaf ODW
+`workflow()` first (MCP or equivalent host path), then inspect or smoke:
 
 ```sh
-sh plugins/sol-advisor/scripts/smoke-odw-one-leaf.sh --host zcode
+sh plugins/sol-advisor/scripts/inspect-odw-run.sh --host zcode /absolute/.odw/.../runs/run-ID
+sh plugins/sol-advisor/scripts/smoke-odw-one-leaf.sh --host zcode --run-dir /absolute/.odw/.../runs/run-ID
 ```
 
 If `plugins/open-dynamic-workflows` is missing, that script prints
