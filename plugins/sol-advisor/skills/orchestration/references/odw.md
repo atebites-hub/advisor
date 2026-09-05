@@ -25,8 +25,23 @@ is installed. Executor refusal is not a pass on alignment.
 ## Preflight
 
 Require the enabled `open-dynamic-workflows@open-dynamic-workflows` plugin at exactly
-version 0.3.0. Other versions are unverified. Do not edit ODW or its installed cache to
-satisfy this check.
+version 0.3.0 on the Codex or ZCode host. `doctor` reports
+`odwPlugin.compatible=true` only for that installed+enabled state. A marketplace
+`package.json` at 0.3.0 is not enough; if `compatible` is false,
+install/enable `open-dynamic-workflows@0.3.0`. Other versions are unverified.
+Do not edit ODW or its installed cache to satisfy this check.
+
+If the box checkout lacks `plugins/open-dynamic-workflows`, initialize it
+before one-leaf seating smoke:
+
+```sh
+git submodule update --init plugins/open-dynamic-workflows
+sh plugins/sol-advisor/scripts/smoke-odw-one-leaf.sh --host zcode
+```
+
+The smoke script is fail-closed: missing checkout, wrong version,
+`plugin_settings_required`, `compatible=false`, or a non-one-leaf run is
+a failure, not a pass.
 
 Pass `cwd` as the exact active workspace. ODW writes required evidence under
 `.odw/<name>/runs/<runId>/`; a read-only project task does not prohibit these run

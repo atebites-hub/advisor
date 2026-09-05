@@ -170,10 +170,26 @@ accepted as ODW evidence, or vice versa.
 The installed `advisor` skill resolves `../../bin/advisor`; no executable is exported
 to `PATH`. Cursor commands resolve the same helper through `CURSOR_PLUGIN_ROOT`,
 `PLUGIN_ROOT`, or `~/.cursor/plugins/local/sol-advisor`. `configure` and `apply`
-currently write only Codex-owned Advisor state.
-ZCode configuration remains in its plugin record. `doctor` is read-only and reports
-capability gates independently. `remove --host codex` is the explicit pre-uninstall
-cleanup and refuses any state it cannot prove Advisor owns.
+write Codex-owned Advisor state (`--host codex`) or ZCode plugin settings
+(`--host zcode`, `~/.zcode/cli/config.json` or `ZCODE_CONFIG`). ZCode apply
+uses the Sol / Ultra + Luna / High factory preset when those four settings
+are empty; configure writes any catalog-backed pair. Neither command rewrites
+host model or provider credentials. `doctor` is read-only and reports
+capability gates independently, including
+`odwPlugin.installHint=install/enable open-dynamic-workflows@0.3.0` when
+`compatible` is false. `compatible=true` requires that plugin installed and
+enabled at 0.3.0 on Codex or ZCode. `remove --host codex` is the explicit
+pre-uninstall cleanup and refuses any state it cannot prove Advisor owns.
+
+QA one-leaf seating after the box ODW submodule exists:
+
+```sh
+sh plugins/sol-advisor/scripts/smoke-odw-one-leaf.sh --host zcode
+```
+
+If `plugins/open-dynamic-workflows` is missing, that script prints
+`git submodule update --init plugins/open-dynamic-workflows` and fails.
+It does not soft-pass.
 
 ## Maintainer verification and release
 

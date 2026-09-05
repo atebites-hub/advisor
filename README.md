@@ -112,8 +112,26 @@ zcode plugins marketplace add atebites-hub/advisor
 zcode plugins install sol-advisor@sol-advisor
 ```
 
-Set all four Advisor options in ZCode Settings → Plugin Management, or use
-`zcode plugins configure ... --options-file`. Then invoke:
+Empty advisor/grunt model+effort in `~/.zcode/cli/config.json` is
+`plugin_settings_required`. Write factory-sane settings with the packaged
+helper (same catalog tuples as Codex). Sol / Ultra + Luna / High is **one
+preset only**, not the product identity:
+
+```text
+$advisor apply --host zcode
+```
+
+Or configure any catalog-backed pair:
+
+```text
+$advisor configure --host zcode --advisor-model MODEL --advisor-effort EFFORT --grunt-model MODEL --grunt-effort EFFORT
+```
+
+`$sol-advisor:advisor` is the ZCode skill name for the same helper. You can
+still set the four options in ZCode Settings → Plugin Management or
+`zcode plugins configure ... --options-file`. Apply/configure merge only
+Advisor plugin options; they do not rewrite host model or provider
+credentials. Then:
 
 ```text
 $sol-advisor:advisor doctor --host zcode
@@ -253,6 +271,32 @@ Update it in repo Settings (or `gh repo edit --description`) to Advisor framing;
 the inherited Codex-native About text is stale.
 
 ## Open Dynamic Workflows
+
+`doctor --host codex|zcode` reports `checks.odwPlugin.compatible=true` only
+when `open-dynamic-workflows@open-dynamic-workflows` is **installed and
+enabled at version 0.3.0** on that host. A marketplace `package.json` at
+0.3.0 is not enough. If `compatible` is false, **install/enable
+`open-dynamic-workflows@0.3.0`** on Codex or ZCode; doctor prints that
+hint instead of only `compatible=false`.
+
+From a marketplace/box checkout, one-leaf seating smoke (fail-closed; does
+not soft-pass):
+
+```sh
+sh plugins/sol-advisor/scripts/smoke-odw-one-leaf.sh --host zcode
+# or, when Advisor is the atebites-plugins submodule:
+# sh plugins/advisor/plugins/sol-advisor/scripts/smoke-odw-one-leaf.sh --host zcode
+```
+
+If the ODW checkout is missing, that script prints exactly:
+
+```text
+git submodule update --init plugins/open-dynamic-workflows
+```
+
+and exits non-zero. After `git submodule update --init plugins/open-dynamic-workflows`,
+re-run it. It still fails until the host has ODW 0.3.0 installed+enabled and a
+completed one-leaf run is available (`--run-dir`).
 
 With `open-dynamic-workflows` 0.3.0 installed, Advisor may choose ODW for
 **scaled or rerunnable multi-executor / multi-harness work that native
