@@ -38,10 +38,12 @@ before one-leaf seating smoke:
 git submodule update --init plugins/open-dynamic-workflows
 ```
 
-One-leaf smoke does not auto-launch a run. Launch a one-leaf ODW
-`workflow()` first, then re-run:
+One-leaf seating is session-gated and does not auto-launch a run. Launch a
+one-leaf ODW `workflow()` first (MCP or equivalent host path), then inspect
+or smoke:
 
 ```sh
+sh plugins/sol-advisor/scripts/inspect-odw-run.sh --host zcode /absolute/.odw/.../runs/run-ID
 sh plugins/sol-advisor/scripts/smoke-odw-one-leaf.sh --host zcode --run-dir /absolute/.odw/.../runs/run-ID
 ```
 

@@ -8,7 +8,8 @@ usage() {
     '' \
     'Fail-closed one-leaf ODW seating smoke. Does not soft-pass.' \
     'This script does not auto-launch a run. Session-gated: launch a one-leaf ODW' \
-    'workflow() first (MCP or equivalent host path), then re-run:' \
+    'workflow() first (MCP or equivalent host path), then inspect or smoke:' \
+    '  inspect-odw-run.sh --host <codex|zcode> /absolute/.odw/.../runs/run-ID' \
     '  smoke-odw-one-leaf.sh --host <codex|zcode> --run-dir /absolute/.odw/.../runs/run-ID' \
     'If the ODW checkout is missing, prints:' \
     '  git submodule update --init plugins/open-dynamic-workflows' \

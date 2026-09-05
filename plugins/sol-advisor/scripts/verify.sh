@@ -225,6 +225,12 @@ grep -Fq -- '--run-dir /absolute/.odw/.../runs/run-ID' "$plugin_dir/skills/orche
   fail "odw.md omits one-leaf --run-dir path"
 grep -Fq -- '--run-dir /absolute/.odw/.../runs/run-ID' "$plugin_dir/skills/orchestration/references/operations.md" ||
   fail "operations.md omits one-leaf --run-dir path"
+grep -Fq 'inspect-odw-run.sh --host zcode /absolute/.odw/.../runs/run-ID' "$repo_dir/README.md" ||
+  fail "README omits one-leaf inspect-odw-run.sh path"
+grep -Fq 'inspect-odw-run.sh --host zcode /absolute/.odw/.../runs/run-ID' "$plugin_dir/skills/orchestration/references/odw.md" ||
+  fail "odw.md omits one-leaf inspect-odw-run.sh path"
+grep -Fq 'inspect-odw-run.sh --host zcode /absolute/.odw/.../runs/run-ID' "$plugin_dir/skills/orchestration/references/operations.md" ||
+  fail "operations.md omits one-leaf inspect-odw-run.sh path"
 grep -Fq 'Antigravity' "$repo_dir/README.md" && grep -Fq 'Copilot' "$repo_dir/README.md" && grep -Fq 'Lane B' "$repo_dir/README.md" ||
   fail "README omits Antigravity/Copilot deferred gaps"
 if rg -n '^\| *Antigravity|^\| *GitHub Copilot|^\| *Copilot' "$repo_dir/README.md"; then

@@ -115,6 +115,8 @@ grep -Fq 'Does not soft-pass' "$tmp/smoke-help.out" || fail "smoke --help omitte
 grep -Fq 'does not auto-launch a run' "$tmp/smoke-help.out" || fail "smoke --help omitted that it does not auto-launch"
 grep -Fq -- '--run-dir /absolute/.odw/.../runs/run-ID' "$tmp/smoke-help.out" ||
   fail "smoke --help omitted launch-then --run-dir path"
+grep -Fq 'Session-gated' "$tmp/smoke-help.out" || fail "smoke --help omitted session-gated wording"
+grep -Fq 'inspect-odw-run.sh' "$tmp/smoke-help.out" || fail "smoke --help omitted inspect-odw-run.sh"
 pass "one-leaf smoke --help documents launch-then --run-dir and stays fail-closed"
 box=$tmp/box
 mkdir -p "$box"
