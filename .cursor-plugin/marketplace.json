@@ -6,7 +6,7 @@
     {
       "name": "sol-advisor",
       "source": ".",
-      "description": "Advisor skills, slash commands, and doctor for Cursor IDE and Cursor CLI. Strict delegation stays disabled until runtime evidence matches the Advisor contract."
+      "description": "Advisor skills, slash commands, and doctor for Cursor IDE and Cursor CLI. Prefer multitask when that is the right tool; ODW must still align (unproven). Strict delegation stays disabled until runtime evidence matches the Advisor contract."
     }
   ]
 }

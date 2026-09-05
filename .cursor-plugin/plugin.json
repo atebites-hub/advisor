@@ -2,7 +2,7 @@
   "name": "sol-advisor",
   "displayName": "Advisor",
   "version": "0.9.3",
-  "description": "Advisor for Cursor IDE and Cursor CLI (`agent`): skills, slash commands, session activation, and honest doctor. Strict delegation stays disabled until Cursor runtime evidence can prove role, model, effort, parent, and completion.",
+  "description": "Advisor for Cursor IDE and Cursor CLI (`agent`): skills, slash commands, session activation, and honest doctor. Prefer multitask when that is the right tool; ODW must still align (unproven). Strict delegation stays disabled until Cursor runtime evidence can prove role, model, effort, parent, and completion.",
   "author": {"name": "atebites-hub"},
   "homepage": "https://github.com/atebites-hub/advisor",
   "repository": "https://github.com/atebites-hub/advisor",

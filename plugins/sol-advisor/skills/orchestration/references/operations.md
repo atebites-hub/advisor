@@ -4,17 +4,20 @@ This is the operator and maintainer reference. The GitHub repository is
 `atebites-hub/advisor`. The package ID remains `sol-advisor` so existing
 `sol-advisor@sol-advisor` installs keep upgrading. All user-facing surfaces
 are Advisor. Any catalog-backed advisor/grunt pair is valid; Sol / Ultra +
-Luna / High is one Codex default preset. Prefer each host's native
-orchestrator; ODW is optional fan-out, not the default.
+Luna / High is one Codex default preset. Native-first **with ODW
+alignment required**: prefer each host's specialty orchestrator when that
+is the right tool; ODW must still detect those modes, not fight them,
+compose or explicitly defer, and fill native gaps. Alignment is unproven
+until live fixtures and QA. Unused ODW is not a pass.
 
 ## Host status
 
 | Host | Native orchestrator | Plugin seating | ODW | Gate |
 |---|---|---|---|---|
-| Codex CLI / ChatGPT Codex app | ultra mode first | supported after hooks | optional, not default | trusted hooks plus rollout evidence |
-| maintained ZCode fork | native Agent | supported | optional, not default | runtime 0.16.3 attestation plus plugin hooks |
-| Cursor IDE / Cursor CLI (`agent`) | multitask first (under-investigated) | disabled | disabled | first-class plugin and CLI install; native child effort and ODW host attestation are still missing; hook failures are fail-open |
-| Claude Code | ultracode / Opus plan first | defer to native; else guidance only | disabled | `doctor --host claude` reports `native_advisor_unverified`; resolved effort is not authoritative; do not overlay Sol-style seating |
+| Codex CLI / ChatGPT Codex app | ultra mode first when that is the right tool | supported after hooks | must align with ultra; executor optional after inspect; alignment unproven | trusted hooks plus rollout evidence |
+| maintained ZCode fork | native Agent | supported | must align with native Agent; executor optional after inspect | runtime 0.16.3 attestation plus plugin hooks |
+| Cursor IDE / Cursor CLI (`agent`) | multitask first when that is the right tool | disabled | must align with multitask; executor disabled; investigation is alignment, not “ODW unused” | first-class plugin and CLI install; native child effort, ODW host attestation, and native/ODW alignment fixtures are still missing; hook failures are fail-open |
+| Claude Code | ultracode / Opus plan first when present | defer to native; else guidance only | must align with ultracode; executor disabled; alignment unproven | `doctor --host claude` reports `native_advisor_unverified`; resolved effort is not authoritative; do not overlay Sol-style seating; defer_to_native is not skip-ODW |
 | Grok Build | none proven | disabled | disabled | hook-handler failures are fail-open |
 | Grok Bot | excluded | excluded | excluded | outside product scope |
 
@@ -28,6 +31,10 @@ repository metadata; keep it Advisor-framed (manual Settings / `gh repo edit`).
 
 Cursor is a first-class Advisor plugin host for install, skills, slash commands,
 `sessionStart` activation, and `doctor`. It is not a strict delegation host.
+Prefer multitask when that is the right native fan-out tool. ODW must still
+align with multitask (detect, do not fight, compose or explicitly defer).
+The Cursor multitask investigation is that **alignment**, not a soft-green
+“ODW unused.” Alignment remains unproven until live fixtures and QA.
 
 The Cursor plugin lives at repository root `.cursor-plugin/plugin.json` with
 skills at `./plugins/sol-advisor/skills`, commands at

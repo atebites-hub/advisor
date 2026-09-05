@@ -24,9 +24,13 @@ child must attest `role=lite`, the parent runtime ID, and the persisted grunt tu
 Set `run_in_background=false`; background results lack the synchronous completion join
 required by the strict lane. Cursor IDE and Cursor CLI have a first-class plugin and
 doctor but no supported plugin-strict native or ODW delegation route; prefer Cursor
-multitask when the user is already using it. On Claude Code, defer to ultracode or
-the built-in advisor / Opus plan instead of seating a plugin grunt. Grok Build has
-no supported native delegation route.
+multitask when that is the right native tool. ODW must still align with
+multitask (detect, do not fight, compose or explicitly defer); that
+alignment is unproven, and unused ODW is not a pass. On Claude Code, defer
+to ultracode or the built-in advisor / Opus plan instead of seating a
+plugin grunt. Native-first there still requires ODW alignment; doctor
+`defer_to_native_when_present` stays unverified and is not skip-ODW.
+Grok Build has no supported native delegation route.
 
 ## Exact route contracts
 

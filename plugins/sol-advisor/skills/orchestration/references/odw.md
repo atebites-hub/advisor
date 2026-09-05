@@ -1,19 +1,26 @@
 # Open Dynamic Workflows contract
 
-ODW is **not** the default orchestrator. Prefer the host native path first:
+**Native-first with ODW alignment required.** Prefer the host specialty
+path when that is the right tool. Native-first does **not** mean skip ODW
+on Claude, Codex, or Cursor. ODW must still align with those modes:
+detect them, do not fight them, document how it seats or composes (or
+explicitly defers), and fill cross-executor / multi-harness gaps natives
+do not cover. Alignment is required design; status is **unproven** until
+live fixtures and QA. Unused ODW is not a soft-green pass.
 
-| Host | Native path |
-|---|---|
-| Claude Code | ultracode, or the built-in advisor / Opus plan |
-| ChatGPT / Codex | ultra mode |
-| Cursor | multitask (still needs a better live investigation) |
-| ZCode | native Agent with persisted `lite` attestation |
+| Host | Prefer this native path | ODW alignment |
+|---|---|---|
+| Claude Code | ultracode, or the built-in advisor / Opus plan | detect; do not fight; compose or explicitly defer |
+| ChatGPT / Codex | ultra mode | same |
+| Cursor | multitask | same. The live investigation is this alignment, not “ODW unused.” |
+| ZCode | native Agent with persisted `lite` attestation | compose with persisted `lite`; use ODW for scaled or rerunnable inspector-accepted work |
 
-Use ODW only for scaled fanout, rerunnable orchestration, or multi-executor
-work those natives do not cover. It remains inside `delegate` or `audit`; the
-advisor owns workflow design, judgment, verification, final review, and
-acceptance. Claude, Cursor, and Grok stay rejected ODW executors even when
-the ODW plugin is installed.
+ODW is **not** the default orchestrator. Use it for scaled fanout,
+rerunnable orchestration, or multi-executor work those natives do not
+cover. It remains inside `delegate` or `audit`; the advisor owns workflow
+design, judgment, verification, final review, and acceptance. Claude,
+Cursor, and Grok stay rejected ODW **executors** even when the ODW plugin
+is installed. Executor refusal is not a pass on alignment.
 
 ## Preflight
 

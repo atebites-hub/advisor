@@ -200,6 +200,13 @@ grep -Fq 'preset' "$repo_dir/README.md" || fail "README does not frame Sol/Luna 
 grep -Fq 'ultracode' "$repo_dir/README.md" && grep -Fq 'ultra mode' "$repo_dir/README.md" && grep -Fq 'multitask' "$repo_dir/README.md" ||
   fail "README omits the native-first orchestrator names"
 grep -Fq 'Native-first vs ODW' "$repo_dir/README.md" || fail "README omits the native-first vs ODW matrix"
+grep -Fq 'Native-first with ODW alignment required' "$repo_dir/README.md" ||
+  fail "README omits required ODW alignment wording"
+grep -Fq 'does **not** mean skip ODW' "$repo_dir/README.md" ||
+  fail "README omits that native-first does not skip ODW"
+grep -Fq 'ODW unused' "$repo_dir/README.md" ||
+  fail "README omits that unused ODW is not a pass"
+grep -Fq 'unproven' "$repo_dir/README.md" || fail "README omits unproven alignment status"
 grep -Fq 'native_advisor_unverified' "$repo_dir/README.md" || fail "README omits Claude doctor code"
 grep -Fq 'Antigravity' "$repo_dir/README.md" && grep -Fq 'Copilot' "$repo_dir/README.md" && grep -Fq 'Lane B' "$repo_dir/README.md" ||
   fail "README omits Antigravity/Copilot deferred gaps"
@@ -222,11 +229,26 @@ if rg -n 'github.com/atebites-hub/sol-advisor' \
 fi
 grep -Fq 'catalog-backed advisor/grunt pair' "$plugin_dir/bin/advisor" || fail "advisor helper usage omits catalog-backed pairs"
 grep -Fq 'defer_to_native_when_present' "$plugin_dir/bin/advisor" || fail "advisor helper omits Claude native-first seating"
+grep -Fq 'nativeAdvisor=unverified' "$plugin_dir/bin/advisor" || fail "advisor helper omits honest Claude nativeAdvisor=unverified"
+grep -Fq 'ODW alignment required' "$plugin_dir/bin/advisor" || fail "advisor helper omits required ODW alignment"
 grep -Fq 'Antigravity' "$plugin_dir/skills/orchestration/references/operations.md" &&
   grep -Fq 'Copilot' "$plugin_dir/skills/orchestration/references/operations.md" ||
   fail "operations.md omits Antigravity/Copilot deferred gaps"
+grep -Fq 'alignment required' "$plugin_dir/skills/orchestration/references/operations.md" ||
+  fail "operations.md omits required ODW alignment"
+grep -Fq 'ODW unused' "$plugin_dir/skills/orchestration/references/operations.md" ||
+  fail "operations.md omits that unused ODW is not a pass"
 grep -Fq 'ultracode' "$plugin_dir/skills/orchestration/references/odw.md" || fail "odw.md omits native-first Claude path"
+grep -Fq 'ODW must still align' "$plugin_dir/skills/orchestration/references/odw.md" ||
+  fail "odw.md omits required ODW alignment"
+grep -Fq 'unproven' "$plugin_dir/skills/orchestration/references/odw.md" ||
+  fail "odw.md omits unproven alignment status"
 grep -Fq 'native_advisor_unverified' "$plugin_dir/skills/advisor/SKILL.md" || fail "advisor skill omits Claude doctor code"
+grep -Fq 'does not' "$plugin_dir/skills/advisor/SKILL.md" &&
+  grep -Fq 'skip ODW' "$plugin_dir/skills/advisor/SKILL.md" ||
+  fail "advisor skill omits that defer_to_native does not skip ODW"
+grep -Fq 'ODW unused' "$plugin_dir/skills/orchestration/SKILL.md" ||
+  fail "orchestration skill omits that unused ODW is not a pass"
 grep -Fq 'version 0.3.0' "$plugin_dir/skills/orchestration/references/odw.md" || fail "ODW compatibility version is missing"
 for section in OBJECTIVE 'FILES AND OWNERSHIP' INTERFACES CONSTRAINTS VERIFICATION RETURN 'IMPLEMENTATION REPORT'; do
   grep -Fq "$section" "$plugin_dir/skills/orchestration/references/role-contracts.md" || fail "grunt packet omits $section"

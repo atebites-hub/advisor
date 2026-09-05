@@ -20,5 +20,8 @@ If those are missing, run `plugins/sol-advisor/scripts/find-helper.sh` from the
 plugin checkout. Never install or recommend a PATH `advisor` command.
 
 Cursor doctor is read-only. Configuration intent, `--model`, hook `model_params`,
-and ODW routing fingerprints are not runtime proof. Do not delegate natively or
-through ODW while doctor reports `strict: false`.
+and ODW routing fingerprints are not runtime proof. Prefer multitask when that
+is the right native tool. ODW must still align with multitask (detect, do not
+fight, compose or explicitly defer). That alignment is unproven; unused ODW
+is not a pass. Do not delegate natively or through ODW while doctor reports
+`strict: false`.

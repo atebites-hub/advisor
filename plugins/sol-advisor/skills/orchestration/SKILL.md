@@ -54,13 +54,18 @@ Use only the host's configured grunt route, without per-spawn model or effort
 overrides. On Codex, preflight the generated `advisor_grunt` role and spawn it with
 `fork_turns=none`. On ZCode, use the native Agent path; the runtime must inherit the
 parent's persisted `lite` tuple, and keep it foreground so the parent hook can attest
-completion. On Cursor IDE and Cursor CLI, prefer native multitask when the user is
-already using it; stay plugin-solo while `doctor --host cursor` reports
-`strict: false`. On Claude Code, detect the harness and defer to ultracode
-or the built-in advisor / Opus plan. Do not seat a Sol-style plugin grunt
-on Claude. Do not delegate on Grok Build while doctor says strict
-delegation is disabled. ODW is never the default orchestrator on Claude,
-Codex ultra mode, or Cursor multitask.
+completion. On Cursor IDE and Cursor CLI, prefer native multitask when that is the
+right tool; stay plugin-solo while `doctor --host cursor` reports
+`strict: false`. The Cursor investigation is ODW **alignment** with
+multitask, not a soft-green “ODW unused.” On Claude Code, detect the
+harness and defer to ultracode or the built-in advisor / Opus plan when
+that is the right tool. Do not seat a Sol-style plugin grunt on Claude.
+`defer_to_native_when_present` stays unverified and does not skip ODW
+alignment. Do not delegate on Grok Build while doctor says strict
+delegation is disabled. Native-first with ODW alignment required: ODW is
+never the default orchestrator on Claude, Codex ultra mode, or Cursor
+multitask, but it must still detect those modes, not fight them, and
+compose or explicitly defer. Alignment is unproven until live fixtures.
 
 Every packet contains OBJECTIVE, FILES AND OWNERSHIP, INTERFACES, CONSTRAINTS,
 VERIFICATION, RETURN, and IMPLEMENTATION REPORT. Treat the grunt's report as a claim:
@@ -70,10 +75,15 @@ inspect the actual diff or artifact and authoritative runtime evidence yourself.
 
 ODW is an execution mechanism inside `delegate` or `audit`, never a fourth route and
 never the default orchestrator. Prefer ultracode (Claude), ultra mode (Codex), or
-multitask (Cursor). Use ODW only for scaled fanout, rerunnable orchestration, or
-multi-executor work those natives do not cover. Pass the active workspace as
-`cwd` and one immutable run policy matching the configured grunt. Raw model nodes,
-mixed routes, resume/cache, or unsupported hosts are invalid.
+multitask (Cursor) when those are the right tool. ODW must still **align**
+with those modes: detect them, do not fight them, seat or compose with them
+(or explicitly defer), and fill cross-executor / multi-harness gaps they
+do not cover. Alignment is required design and unproven until live
+fixtures and QA. Unused ODW is not a pass. Use ODW for scaled fanout,
+rerunnable orchestration, or multi-executor work those natives do not
+cover. Pass the active workspace as `cwd` and one immutable run policy
+matching the configured grunt. Raw model nodes, mixed routes, resume/cache,
+or unsupported hosts are invalid.
 
 Inspect the exact completed run before using any result. Every model node needs a
 unique authoritative runtime ID, the exact policy tuple, a successful fresh lifecycle,
