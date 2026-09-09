@@ -40,7 +40,7 @@ codex_home=$tmp_dir/codex-home
 mkdir -p "$codex_home"
 run_advisor() {
   ADVISOR_CONFIG_HOME=$config_home ADVISOR_MODEL_CATALOG=$catalog ADVISOR_AGENT_DIR=$tmp_dir/agents \
-    CODEX_HOME=$codex_home sh "$advisor" "$@"
+    CODEX_HOME=$codex_home CLAUDE_CONFIG_DIR=$tmp_dir/claude sh "$advisor" "$@"
 }
 
 profile=$config_home/codex.json
@@ -216,12 +216,30 @@ jq -e '
 jq -e '
   .diagnostics.seating == "defer_to_native_when_present" and
   .diagnostics.nativeAdvisor == "unverified" and
-  .diagnostics.nativeOrchestrator == "ultracode" and
+  .diagnostics.nativeOrchestrator == "advisor_tool" and
+  .diagnostics.advisorEffort == "not_exposed" and
+  .diagnostics.effectiveSettings == "unverified" and
   .diagnostics.pluginStrict == false and
   .diagnostics.odwDefault == false and
   .odwLane == "disabled" and .nativeLane == "disabled" and
   .checks.hooks.trustObservable == false and .checks.hooks.trusted == false
 ' "$tmp_dir/claude.json" >/dev/null || fail "Claude doctor omitted native-first diagnostics"
+mkdir -p "$tmp_dir/claude"
+printf '%s\n' '{"advisorModel":"fable","model":"sonnet","effortLevel":"high","env":{"PRIVATE_VALUE":"must-not-be-exported"}}' > "$tmp_dir/claude/settings.json"
+run_advisor doctor --host claude --json > "$tmp_dir/claude-configured.json" || true
+jq -e '
+  .strict == false and .diagnostics.nativeAdvisor == "unverified" and
+  .diagnostics.userSettings.advisorModel == "fable" and
+  .diagnostics.userSettings.mainModel == "sonnet" and
+  .diagnostics.userSettings.mainEffort == "high" and
+  .diagnostics.userSettings.readable == true and
+  (.diagnostics.nativeControls | index("--advisor MODEL")) != null
+' "$tmp_dir/claude-configured.json" >/dev/null || fail "Claude native selections were not reported independently"
+if grep -Fq must-not-be-exported "$tmp_dir/claude-configured.json"; then fail "Claude diagnostics exposed unrelated settings"; fi
+printf '%s\n' '[' > "$tmp_dir/claude/settings.json"
+run_advisor doctor --host claude --json > "$tmp_dir/claude-invalid.json" || true
+jq -e '.diagnostics.userSettings.readable == false and .strict == false' "$tmp_dir/claude-invalid.json" >/dev/null || fail "Claude malformed settings overclaimed readiness"
+pass "Claude native settings are allowlisted intent, not effective settings or runtime proof"
 jq -e '.checks.hooks.trustObservable == false and .checks.hooks.trusted == false' \
   "$tmp_dir/grok.json" >/dev/null || fail "Grok doctor invented hook trust"
 if run_advisor doctor --host grok-bot --json >/dev/null 2>&1; then fail "Grok Bot was not excluded"; fi

@@ -10,12 +10,13 @@ usage() {
     '  advisor configure --host codex|zcode --advisor-model MODEL --advisor-effort EFFORT --grunt-model MODEL --grunt-effort EFFORT' \
     '  advisor apply --host codex|zcode' \
     '  advisor doctor --host codex|zcode|grok|cursor|claude [--json]' \
-    '  configure accepts any catalog-backed advisor/grunt pair. Codex and ZCode factory apply use the Sol/Ultra + Luna/High preset only.' \
+    '  configure accepts any catalog-backed advisor/grunt pair. Only Codex reads the Codex catalog by default; ADVISOR_MODEL_CATALOG is an explicit host-specific override.' \
+    '  Codex has a legacy Sol/Ultra + Luna/High preset. ZCode apply requires an explicitly configured pair and never selects that preset for you.' \
     '  ZCode apply/configure write those tuples into plugin settings (`~/.zcode/cli/config.json` or ZCODE_CONFIG). They do not rewrite host model or provider credentials.' \
     '  doctor reports odwPlugin.compatible=true only when open-dynamic-workflows@open-dynamic-workflows is installed+enabled at version 0.3.0 on that Codex or ZCode host. Marketplace package.json at 0.3.0 is not enough.' \
     '  If compatible=false, install/enable open-dynamic-workflows@0.3.0 on that host.' \
     '  Cursor CLI is `agent` / `cursor-agent`. Doctor reports gaps; it does not enable delegation.' \
-    '  Claude: prefer ultracode / Opus plan when that is the right tool; doctor defers to that native path (`nativeAdvisor=unverified`) and never enables plugin-strict seating.' \
+    '  Claude: use native /advisor MODEL, advisorModel, or --advisor MODEL for consultation; this is separate from opusplan and ultracode. Doctor keeps nativeAdvisor=unverified until live evidence and never enables plugin-strict seating.' \
     '  Native-first with ODW alignment required: detect ultracode / Codex ultra / Cursor multitask, do not fight them, compose or explicitly defer. Alignment is unproven; unused ODW is not a pass.' \
     '  advisor remove --host codex'
 }
@@ -377,7 +378,10 @@ configure() {
   valid_effort "$grunt_effort" || fail "grunt effort contains unsupported characters."
 
   need jq
-  require_catalog_tuples "$advisor_model" "$advisor_effort" "$grunt_model" "$grunt_effort"
+  # A Codex installation must not decide which GLM/provider models ZCode accepts.
+  if [ "$host" = codex ] || [ -n "${ADVISOR_MODEL_CATALOG-}" ]; then
+    require_catalog_tuples "$advisor_model" "$advisor_effort" "$grunt_model" "$grunt_effort"
+  fi
   if [ "$host" = zcode ]; then
     write_zcode_plugin_settings "$advisor_model" "$advisor_effort" "$grunt_model" "$grunt_effort"
     printf '%s\n' 'Start a new ZCode session, then run `$advisor doctor --host zcode`.'
@@ -540,19 +544,38 @@ probe_host() {
 }
 
 claude_diagnostics() {
-  jq -n --argjson cli_present "$check_cli_present" --arg cli_version "$check_cli_version" '{
+  claude_settings=${CLAUDE_CONFIG_DIR:-${HOME-}/.claude}/settings.json
+  selected='{"readable":false,"advisorModel":null,"mainModel":null,"mainEffort":null}'
+  if [ -f "$claude_settings" ] && [ ! -L "$claude_settings" ] && [ -r "$claude_settings" ]; then
+    selected=$(jq -ce '
+      if type != "object" then error("invalid settings") else
+        {readable:true,
+         advisorModel:(.advisorModel | if type == "string" then . else null end),
+         mainModel:(.model | if type == "string" then . else null end),
+         mainEffort:(.effortLevel | if type == "string" then . else null end)}
+      end
+    ' "$claude_settings" 2>/dev/null) ||
+      selected='{"readable":false,"advisorModel":null,"mainModel":null,"mainEffort":null}'
+  fi
+  jq -n --argjson cli_present "$check_cli_present" --arg cli_version "$check_cli_version" \
+    --arg settings_path "$claude_settings" --argjson selected "$selected" '{
     seating:"defer_to_native_when_present",
     nativeAdvisor:"unverified",
-    nativeOrchestrator:"ultracode",
+    nativeOrchestrator:"advisor_tool",
+    nativeControls:["/advisor MODEL","advisorModel","--advisor MODEL"],
+    userSettings:($selected + {path:$settings_path}),
+    effectiveSettings:"unverified",
+    advisorEffort:"not_exposed",
     pluginStrict:false,
     odwDefault:false,
-    followUp:"live_claude_opus_plan_fixture",
+    followUp:"live_native_advisor_tool_result",
     cliPresent:$cli_present,
     cliVersion:$cli_version,
     gaps:[
-      "opus_plan_surface_unmapped",
-      "ultracode_attestation_unavailable",
-      "resolved_effort_not_authoritative"
+      "native_advisor_invocation_unobserved",
+      "native_pairing_and_account_access_unverified",
+      "settings_precedence_unobserved",
+      "advisor_effort_not_exposed"
     ]
   }'
 }
@@ -701,22 +724,18 @@ doctor() {
 apply_zcode() {
   need jq
   resolve_zcode_config
-  advisor_model=$default_advisor_model
-  advisor_effort=$default_advisor_effort
-  grunt_model=$default_grunt_model
-  grunt_effort=$default_grunt_effort
-  if path_exists "$zcode_config" && [ -f "$zcode_config" ] && [ ! -L "$zcode_config" ] && [ -r "$zcode_config" ] &&
-    zcode_four_settings_present "$zcode_config"; then
-    advisor_model=$(jq -r '.plugins.options["sol-advisor@sol-advisor"].advisor_model' "$zcode_config")
-    advisor_effort=$(jq -r '.plugins.options["sol-advisor@sol-advisor"].advisor_effort' "$zcode_config")
-    grunt_model=$(jq -r '.plugins.options["sol-advisor@sol-advisor"].grunt_model' "$zcode_config")
-    grunt_effort=$(jq -r '.plugins.options["sol-advisor@sol-advisor"].grunt_effort' "$zcode_config")
-    valid_model "$advisor_model" && valid_effort "$advisor_effort" &&
-      valid_model "$grunt_model" && valid_effort "$grunt_effort" ||
-      fail "existing ZCode plugin settings are present but unsafe."
-  fi
+  [ -f "$zcode_config" ] && [ ! -L "$zcode_config" ] && [ -r "$zcode_config" ] &&
+    zcode_four_settings_present "$zcode_config" ||
+    fail 'ZCode needs an explicit advisor/grunt pair. Run `$advisor configure --host zcode --advisor-model MODEL --advisor-effort EFFORT --grunt-model MODEL --grunt-effort EFFORT` first.'
+  advisor_model=$(jq -r '.plugins.options["sol-advisor@sol-advisor"].advisor_model' "$zcode_config")
+  advisor_effort=$(jq -r '.plugins.options["sol-advisor@sol-advisor"].advisor_effort' "$zcode_config")
+  grunt_model=$(jq -r '.plugins.options["sol-advisor@sol-advisor"].grunt_model' "$zcode_config")
+  grunt_effort=$(jq -r '.plugins.options["sol-advisor@sol-advisor"].grunt_effort' "$zcode_config")
+  valid_model "$advisor_model" && valid_effort "$advisor_effort" &&
+    valid_model "$grunt_model" && valid_effort "$grunt_effort" ||
+    fail "existing ZCode plugin settings are present but unsafe."
   write_zcode_plugin_settings "$advisor_model" "$advisor_effort" "$grunt_model" "$grunt_effort"
-  printf '%s\n' 'Start a new ZCode session after reviewing plugin settings. Sol/Ultra + Luna/High is one factory preset only.'
+  printf '%s\n' 'Start a new ZCode session after reviewing your host-specific advisor/grunt pair.'
 }
 
 apply_profile() {

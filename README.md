@@ -20,7 +20,7 @@ High is one Codex default **preset**, not the product identity.
 | Codex CLI / ChatGPT Codex app | **ultra mode first** when that is the right tool | strict `advisor_grunt` after hook trust and live rollout evidence | **must align** with ultra (detect, do not fight, compose or defer); executor optional after inspect; alignment unproven |
 | ZCode | persisted `main` / `lite` plus runtime attestation | strict on the maintained fork after live attestation | **must align** with native Agent; executor optional after the same evidence contract |
 | Cursor IDE / Cursor CLI (`agent`) | **multitask first** when that is the right tool | first-class plugin, commands, CLI install, and doctor; strict seating disabled | **must align** with multitask; executor refused until evidence; investigation is alignment, not “ODW unused” |
-| Claude Code | **ultracode / Opus plan first** when present and that is the right tool | defer to that native path; else plugin guidance only. Never overlay Sol-style strict seating | **must align** with ultracode; executor rejected; alignment unproven |
+| Claude Code | native **advisor tool** for consultation; `opusplan` and ultracode are separate features | user-chosen native advisor; plugin guidance and configured-model diagnostics only. Never overlay Codex strict seating | **must align** with native orchestration; executor rejected; alignment unproven |
 | Grok Build | none proven | experimental detection; strict delegation disabled because hook failures are fail-open | rejected |
 | Grok Bot | excluded | excluded | excluded |
 
@@ -47,7 +47,7 @@ mean skip ODW on Claude, Codex, or Cursor.
 
 | Host | Prefer this native path | ODW alignment (required; unproven) |
 |---|---|---|
-| Claude Code | ultracode, or Claude's built-in advisor / Opus plan | Detect ultracode; do not fight it. Document how ODW seats or composes with it, or explicitly defer. Fill cross-executor / multi-harness gaps natives do not cover. |
+| Claude Code | native advisor tool for consultation; opusplan for plan-mode model switching; ultracode when appropriate | Detect native orchestration; do not fight it. Document how ODW seats or composes with it, or explicitly defer. These native features are not interchangeable. |
 | ChatGPT / Codex | ultra mode | Same with ultra: detect, do not fight, compose or defer, fill native gaps. |
 | Cursor | multitask | Same with multitask. The live investigation is this **alignment**, not a soft-green “ODW unused.” |
 | ZCode | native Agent with persisted `lite` attestation | Compose with persisted `lite` attestation; use ODW for scaled or rerunnable work the inspector already accepts. |
@@ -113,25 +113,22 @@ zcode plugins install sol-advisor@sol-advisor
 ```
 
 Empty advisor/grunt model+effort in `~/.zcode/cli/config.json` is
-`plugin_settings_required`. Write factory-sane settings with the packaged
-helper (same catalog tuples as Codex). Sol / Ultra + Luna / High is **one
-preset only**, not the product identity:
-
-```text
-$advisor apply --host zcode
-```
-
-Or configure any catalog-backed pair:
+`plugin_settings_required`. Choose the ZCode/provider pair explicitly;
+`apply` no longer silently installs the Codex Sol/Luna preset. Configure:
 
 ```text
 $advisor configure --host zcode --advisor-model MODEL --advisor-effort EFFORT --grunt-model MODEL --grunt-effort EFFORT
+$advisor apply --host zcode
 ```
 
 `$sol-advisor:advisor` is the ZCode skill name for the same helper. You can
 still set the four options in ZCode Settings → Plugin Management or
 `zcode plugins configure ... --options-file`. Apply/configure merge only
 Advisor plugin options; they do not rewrite host model or provider
-credentials. Then:
+credentials. ZCode does not read Codex's model catalog. You may provide a
+host-specific `ADVISOR_MODEL_CATALOG` explicitly; without one, configuration
+is intent, and live ZCode runtime evidence must establish model availability.
+Then:
 
 ```text
 $sol-advisor:advisor doctor --host zcode
@@ -217,13 +214,22 @@ unproven until live fixtures and QA.
 
 ### Claude Code
 
-Install this repository through the Claude plugin marketplace and invoke the
-installed `advisor` skill for diagnostics only.
+Install this repository through the Claude plugin marketplace. Use Claude's
+native `/advisor MODEL` to choose the consulting model, or `advisorModel` in
+user settings. For a session-local choice, use `claude --advisor MODEL`.
+Keep the main model unchanged unless you explicitly want a different executor.
+For example, a supported Sonnet main can consult Fable; native pairing and
+account-access checks decide availability, not Codex's model catalog.
 
-Claude already has a built-in advisor / Opus plan path (**ultracode**). Detect
-that harness and **defer to it** for specialty orchestration when it is the
-right tool. Do not seat a Sol-style plugin advisor/grunt pair as if Claude
-had none.
+The native advisor tool is **not** `opusplan` or ultracode. `opusplan` switches
+models between planning and execution; the advisor tool supplies a consultation
+during the executor's task. It does not expose a separate advisor-effort knob.
+Fable may require user-approved usage-credit consent; the plugin must never
+accept that consent or silently substitute another model.
+
+See [Claude Code's native advisor contract](https://code.claude.com/docs/en/advisor).
+The plugin skill remains diagnostics/guidance, not a replacement for native
+`/advisor`. Do not seat a Codex-shaped advisor/grunt pair on this host.
 
 Native-first does **not** skip ODW alignment. ODW must still detect
 ultracode, not fight it, and document how it seats, composes, or explicitly
@@ -239,11 +245,12 @@ Doctor is honest and fail-closed:
 - `strict` is always `false`
 - `odwLane` is `disabled` (ODW is not Claude's default orchestrator; this is
   not a pass on alignment)
-- `code` is `native_advisor_unverified` until a live Claude fixture maps the
-  Opus plan / ultracode command surface
+- `code` is `native_advisor_unverified`; reading settings is not live evidence
 - `diagnostics.seating` is `defer_to_native_when_present`
-- `diagnostics.nativeAdvisor` stays `unverified` in this release (follow-up:
-  prove the native path, then set `present` and keep plugin seating off)
+- `diagnostics.userSettings` reports the configured advisor, main model, and
+  main effort only; CLI/project/managed overrides remain unverified
+- `diagnostics.nativeAdvisor` stays `unverified` until a real native
+  consultation result proves the path; plugin strict seating remains off
 
 If the native path is absent, the plugin skill is guidance only. It is not
 runtime proof and must not spawn a Codex-shaped grunt.
