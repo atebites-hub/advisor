@@ -17,7 +17,7 @@ until live fixtures and QA. Unused ODW is not a pass.
 | Codex CLI / ChatGPT Codex app | ultra mode first when that is the right tool | supported after hooks | must align with ultra; executor optional after inspect; alignment unproven | trusted hooks plus rollout evidence |
 | maintained ZCode fork | native Agent | supported | must align with native Agent; executor optional after inspect | runtime 0.16.3 attestation plus plugin hooks |
 | Cursor IDE / Cursor CLI (`agent`) | multitask first when that is the right tool | disabled | must align with multitask; executor disabled; investigation is alignment, not “ODW unused” | first-class plugin and CLI install; native child effort, ODW host attestation, and native/ODW alignment fixtures are still missing; hook failures are fail-open |
-| Claude Code | ultracode / Opus plan first when present | defer to native; else guidance only | must align with ultracode; executor disabled; alignment unproven | `doctor --host claude` reports `native_advisor_unverified`; resolved effort is not authoritative; do not overlay Sol-style seating; defer_to_native is not skip-ODW |
+| Claude Code | native advisor tool; opusplan and ultracode are separate | use native advisor selection; plugin guidance only | must align with native orchestration; executor disabled; alignment unproven | `doctor --host claude` reports `native_advisor_unverified` and allowlisted user settings; configuration is not a consultation result; defer_to_native is not skip-ODW |
 | Grok Build | none proven | disabled | disabled | hook-handler failures are fail-open |
 | Grok Bot | excluded | excluded | excluded | outside product scope |
 
@@ -181,14 +181,23 @@ to `PATH`. Cursor commands resolve the same helper through `CURSOR_PLUGIN_ROOT`,
 `PLUGIN_ROOT`, or `~/.cursor/plugins/local/sol-advisor`. `configure` and `apply`
 write Codex-owned Advisor state (`--host codex`) or ZCode plugin settings
 (`apply --host zcode` / `configure --host zcode`, `~/.zcode/cli/config.json`
-or `ZCODE_CONFIG`). ZCode apply uses the Sol / Ultra + Luna / High factory
-preset when those four settings are empty; configure writes any catalog-backed pair. Neither command rewrites
+or `ZCODE_CONFIG`). ZCode apply refuses empty settings and preserves an explicit
+pair. Only Codex reads its local model catalog automatically; ZCode may use an
+explicit `ADVISOR_MODEL_CATALOG` for its own host, never the implicit Codex cache.
+Without a ZCode catalog, configuration intent still needs runtime evidence. Neither command rewrites
 host model or provider credentials. `doctor` is read-only and reports
 capability gates independently, including
 `odwPlugin.installHint=install/enable open-dynamic-workflows@0.3.0` when
 `compatible` is false. `compatible=true` requires that plugin installed and
 enabled at 0.3.0 on Codex or ZCode. `remove --host codex` is the explicit
 pre-uninstall cleanup and refuses any state it cannot prove Advisor owns.
+
+Claude uses native `/advisor MODEL`, the `advisorModel` setting, or the
+session-local `--advisor MODEL` flag. This is separate from `opusplan` and
+ultracode. Native pairing/account checks remain authoritative; main effort
+is not advisor effort, and billing consent stays user-controlled. Doctor's
+`userSettings` excludes credentials and is not effective-settings or runtime
+proof. See https://code.claude.com/docs/en/advisor.
 
 QA one-leaf seating after the box ODW submodule exists. Seating is
 session-gated and does not auto-launch a run. Launch a one-leaf ODW

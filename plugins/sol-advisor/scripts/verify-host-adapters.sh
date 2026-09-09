@@ -67,24 +67,22 @@ jq -n '{models:[
   {slug:"zai/advisor",supported_reasoning_levels:[{effort:"high"}]},
   {slug:"zai/grunt",supported_reasoning_levels:[{effort:"low"}]}
 ]}' > "$catalog"
-apply_empty=$(HOME=$tmp ZCODE_CONFIG=$empty ADVISOR_MODEL_CATALOG=$catalog sh "$advisor" apply --host zcode)
-printf '%s\n' "$apply_empty" | grep -Fq "WROTE: $empty" || fail "ZCode apply did not report the written config"
-jq -e '
-  .model.main == "host/original" and .provider.keep.apiKey == "not-read-by-advisor" and
-  .plugins.enabled == true and .plugins.enabledPlugins["sol-advisor@sol-advisor"] == true and
-  .plugins.options["sol-advisor@sol-advisor"] == {advisor_model:"gpt-5.6-sol",advisor_effort:"ultra",grunt_model:"gpt-5.6-luna",grunt_effort:"high"}
-' "$empty" >/dev/null || fail "ZCode apply did not write the factory preset or mutated host settings"
-applied_doctor=$(HOME=$tmp ZCODE_CONFIG=$empty ADVISOR_MODEL_CATALOG=$catalog sh "$advisor" doctor --host zcode --json || true)
-printf '%s\n' "$applied_doctor" | jq -e '
-  .code == "runtime_attestation_required" and .profileValid == true and .strict == false and
-  .advisor.model == "gpt-5.6-sol" and .advisor.effort == "ultra" and
-  .grunt.model == "gpt-5.6-luna" and .grunt.effort == "high" and
-  .checks.odwPlugin.installHint == "install/enable open-dynamic-workflows@0.3.0"
-' >/dev/null || fail "ZCode apply did not get doctor past plugin_settings_required"
+empty_before=$(shasum -a 256 "$empty")
+must_fail "ZCode apply without an explicit pair" env HOME=$tmp ZCODE_CONFIG=$empty ADVISOR_MODEL_CATALOG=$catalog sh "$advisor" apply --host zcode
+[ "$empty_before" = "$(shasum -a 256 "$empty")" ] || fail "ZCode apply silently selected the Codex preset"
 created=$tmp/created/cli/config.json
-HOME=$tmp ZCODE_CONFIG=$created ADVISOR_MODEL_CATALOG=$catalog sh "$advisor" apply --host zcode >/dev/null
-jq -e '.plugins.options["sol-advisor@sol-advisor"].advisor_model == "gpt-5.6-sol"' "$created" >/dev/null ||
-  fail "ZCode apply did not create missing plugin settings"
+must_fail "ZCode apply with no settings file" env HOME=$tmp ZCODE_CONFIG=$created ADVISOR_MODEL_CATALOG=$catalog sh "$advisor" apply --host zcode
+[ ! -e "$created" ] || fail "ZCode apply created an implicit preset"
+# The normal Codex cache deliberately lacks these GLM tuples. It is not ZCode's catalog.
+mkdir -p "$tmp/codex-home"
+cp "$catalog" "$tmp/codex-home/models_cache.json"
+HOME=$tmp CODEX_HOME=$tmp/codex-home ZCODE_CONFIG=$created ADVISOR_MODEL_CATALOG= sh "$advisor" configure --host zcode \
+  --advisor-model glm-5.3 --advisor-effort max --grunt-model glm-5.3-flash --grunt-effort high >/dev/null
+HOME=$tmp CODEX_HOME=$tmp/codex-home ZCODE_CONFIG=$created ADVISOR_MODEL_CATALOG= sh "$advisor" apply --host zcode >/dev/null
+jq -e '.plugins.options["sol-advisor@sol-advisor"] == {advisor_model:"glm-5.3",advisor_effort:"max",grunt_model:"glm-5.3-flash",grunt_effort:"high"}' \
+  "$created" >/dev/null || fail "ZCode borrowed Codex models or replaced its configured pair"
+must_fail "Codex still validates its own catalog" env HOME=$tmp CODEX_HOME=$tmp/codex-home ADVISOR_CONFIG_HOME=$tmp/rejected-codex ADVISOR_MODEL_CATALOG= \
+  sh "$advisor" configure --host codex --advisor-model glm-5.3 --advisor-effort max --grunt-model glm-5.3-flash --grunt-effort high
 configure_out=$(HOME=$tmp ZCODE_CONFIG=$config ADVISOR_MODEL_CATALOG=$catalog sh "$advisor" configure --host zcode \
   --advisor-model zai/advisor --advisor-effort high --grunt-model zai/grunt --grunt-effort low)
 printf '%s\n' "$configure_out" | grep -Fq "WROTE: $config" || fail "ZCode configure did not report the written config"
@@ -103,7 +101,7 @@ symlink_config=$tmp/symlink-config.json
 ln -s "$config" "$symlink_config"
 must_fail "symlinked ZCode apply" env HOME=$tmp ZCODE_CONFIG=$symlink_config ADVISOR_MODEL_CATALOG=$catalog sh "$advisor" apply --host zcode
 must_fail "Cursor still refuses ZCode-only apply on cursor" env ADVISOR_CONFIG_HOME=$tmp/config sh "$advisor" apply --host cursor
-pass "ZCode apply/configure write catalog-backed settings and preserve host credentials"
+pass "host-isolated model selection, explicit ZCode pairs, and preserved provider credentials"
 
 policy_a=$(jq -cn '{advisorModel:"zai/advisor",advisorEffort:"high",gruntModel:"zai/grunt",gruntEffort:"low"}')
 policy_b=$(jq -cn '{advisorModel:"zai/new-advisor",advisorEffort:"max",gruntModel:"zai/new-grunt",gruntEffort:"medium"}')

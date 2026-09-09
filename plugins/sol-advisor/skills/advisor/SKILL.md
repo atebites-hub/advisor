@@ -25,13 +25,16 @@ doctor --host codex|zcode|grok|cursor|claude [--json]
 remove --host codex
 ```
 
-`configure` accepts any catalog-backed advisor/grunt pair. When a local Codex
+`configure` accepts any catalog-backed advisor/grunt pair. For Codex, when a local Codex
 model catalog is present, both tuples must exist there; when it is absent,
 configure still writes the pair and `doctor` reports
-`model_capability_unverified`. `apply --host zcode` writes factory-sane
-plugin settings into `~/.zcode/cli/config.json` (or `ZCODE_CONFIG`) so
-doctor can get past `plugin_settings_required`. The Codex/ZCode factory
-preset is Sol / Ultra + Luna / High only—not the product identity.
+`model_capability_unverified`. ZCode never borrows Codex's catalog. An explicit
+`ADVISOR_MODEL_CATALOG` may supply the target host's catalog; otherwise ZCode
+accepts configuration intent and its runtime must verify availability.
+Configure all four ZCode options first. `apply --host zcode` preserves that pair
+in `~/.zcode/cli/config.json` (or `ZCODE_CONFIG`) and refuses empty settings.
+The legacy Sol / Ultra + Luna / High preset belongs to Codex only, not the
+product identity. Explicit choices, including Astra on Codex, take precedence.
 
 `doctor` reports `odwPlugin.compatible=true` only when
 `open-dynamic-workflows@open-dynamic-workflows` is installed+enabled at
@@ -39,11 +42,19 @@ version 0.3.0 on that Codex or ZCode host. If `compatible` is false,
 install/enable `open-dynamic-workflows@0.3.0`; marketplace `package.json`
 at 0.3.0 is not enough.
 
-On Claude, prefer ultracode or the built-in advisor / Opus plan when that
-is the right tool. `doctor --host claude` reports
+On Claude Code, use the native `/advisor MODEL`, `advisorModel` user setting,
+or session-local `claude --advisor MODEL`. The native `/advisor` command is
+not this plugin's skill. Keep the existing main model unless the user asks
+to change it. The advisor tool is separate from `opusplan` (plan-mode model
+switching), subagents, and ultracode. Use native pairing/account checks; never
+substitute Sol, map main effort onto advisor effort, or accept billing consent
+on the user's behalf. Native advisor effort is not separately exposed.
+`doctor --host claude` reports
 `code=native_advisor_unverified`,
 `diagnostics.seating=defer_to_native_when_present`, and `odwLane=disabled`.
-Keep that seating honest: `nativeAdvisor` stays `unverified`. Do not
+`diagnostics.userSettings` reports only the configured advisor/main/effort,
+not effective policy or a successful consultation. Keep that seating honest:
+`nativeAdvisor` stays `unverified`. Do not
 overlay Sol-style plugin seating. `defer_to_native_when_present` does not
 mean skip ODW.
 
