@@ -331,7 +331,7 @@ advisor still inspects the real output, reruns verification, and renders the ver
 
 This repository is a true GitHub fork of
 [DannyMac180/sol-advisor](https://github.com/DannyMac180/sol-advisor). Remotes,
-last-synced tip, factory divergence, and weekday sync are in
+last-synced tip, factory divergence, and the manual sync policy are in
 [UPSTREAM.md](UPSTREAM.md).
 
 ```sh

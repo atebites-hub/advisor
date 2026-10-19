@@ -238,8 +238,9 @@ if rg -n '^\| *Antigravity|^\| *GitHub Copilot|^\| *Copilot' "$repo_dir/README.m
 fi
 grep -Fq 'https://github.com/atebites-hub/advisor.git' "$repo_dir/UPSTREAM.md" || fail "UPSTREAM.md origin is not atebites-hub/advisor"
 grep -Fq 'DannyMac180/sol-advisor' "$repo_dir/UPSTREAM.md" || fail "UPSTREAM.md dropped the true-fork parent"
-grep -Fq "github.repository == 'atebites-hub/advisor'" "$repo_dir/.github/workflows/sync-upstream.yml" ||
-  fail "sync-upstream.yml is not gated on atebites-hub/advisor"
+if [ -e "$repo_dir/.github/workflows/sync-upstream.yml" ]; then
+  fail "sync-upstream.yml must stay removed"
+fi
 grep -Fq "github.repository == 'atebites-hub/advisor'" "$repo_dir/.github/workflows/cleanup-artifacts.yml" ||
   fail "cleanup-artifacts.yml is not gated on atebites-hub/advisor"
 if rg -n 'github.com/atebites-hub/sol-advisor' \
