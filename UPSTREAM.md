@@ -41,8 +41,8 @@ match: this fork is **ahead**, not behind). Reconfirmed 2026-09-10:
 - Weekday Sync upstream run [`34506380614`](https://github.com/atebites-hub/advisor/actions/runs/34506380614)
   logged `origin/main already contains upstream/main; nothing to sync`.
 
-The weekday sync workflow rewrites only the `upstream-tip-begin/end` span when
-it opens a clean sync PR.
+Update the `upstream-tip-begin/end` span by hand when a manual sync lands.
+The weekday Sync upstream workflow that rewrote that span was removed.
 
 ## Owners
 
@@ -77,7 +77,7 @@ the deferral here.
 | ODW inspect-odw-run (immutable policy) | Accept only fresh completed traces that match the immutable `{executor, model, reasoningEffort}` policy | Medium — ODW references and inspectors | `d57f2bc`, `1dbd761` |
 | Automatic session activation | Inject orchestration contract at session start on supported hosts | Medium — hooks and prompt copy | `6fa9aac`, `17dba52` |
 | Bounded grunt enforcement / ordinary-tool continuity | One bounded grunt when useful; solo tools stay available outside Advisor routing | Medium — spawn guards and verifier isolation | `7416c9a`, `60432dd` (PR #4), `aad5fe1` (PR #5) |
-| Fork-maintenance docs + weekday sync | `UPSTREAM.md` + `.github/workflows/sync-upstream.yml`; keep the GitHub fork relationship | Low — docs and workflow only | `f6f4fb8` (PR #7) |
+| Fork-maintenance docs | `UPSTREAM.md`; keep the GitHub fork relationship. Weekday `.github/workflows/sync-upstream.yml` was removed after daily failures from 2026-10-02 | Low — docs only | `f6f4fb8` (PR #7) |
 | Weekly Actions artifact cleanup | Delete artifacts older than 3 days (`cleanup-artifacts.yml`) | Low — workflow only | `d43e860` (PR #8) |
 | atebites-hub marketplace catalogs | Install origin is this fork (`atebites-hub/advisor`), not `DannyMac180/sol-advisor` | Low — catalog JSON only | `f0f1257` |
 
@@ -177,13 +177,10 @@ git push -u origin HEAD
 # Merge with a merge commit.
 ```
 
-Weekday automation: `.github/workflows/sync-upstream.yml` (UTC cron, plus
-`workflow_dispatch`). If an open PR already has that exact title, the workflow
-leaves it alone.
-
-`GITHUB_TOKEN` pull requests do not start other workflows. Set repository
-secret `UPSTREAM_SYNC_TOKEN` (Factory Plugins bot PAT with `contents` +
-`pull-requests`) so sync PRs still run CI.
+Sync is manual. The weekday `.github/workflows/sync-upstream.yml` automation
+(UTC cron `35 13 * * 1-5`, plus `workflow_dispatch`) was removed after it
+failed on every run from 2026-10-02. Repository secret `UPSTREAM_SYNC_TOKEN`
+is no longer referenced.
 
 ### After every sync
 
