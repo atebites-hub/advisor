@@ -241,8 +241,9 @@ grep -Fq 'DannyMac180/sol-advisor' "$repo_dir/UPSTREAM.md" || fail "UPSTREAM.md 
 if [ -e "$repo_dir/.github/workflows/sync-upstream.yml" ]; then
   fail "sync-upstream.yml must stay removed"
 fi
-grep -Fq "github.repository == 'atebites-hub/advisor'" "$repo_dir/.github/workflows/cleanup-artifacts.yml" ||
-  fail "cleanup-artifacts.yml is not gated on atebites-hub/advisor"
+if [ -e "$repo_dir/.github/workflows/cleanup-artifacts.yml" ]; then
+  fail "cleanup-artifacts.yml must stay removed"
+fi
 if rg -n 'github.com/atebites-hub/sol-advisor' \
   "$repo_dir/marketplace.json" \
   "$repo_dir/.cursor-plugin" \

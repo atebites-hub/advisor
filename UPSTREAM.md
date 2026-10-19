@@ -62,7 +62,7 @@ the deferral here.
 | --- | --- | --- | --- |
 | Cross-host Advisor (Cursor, ZCode, Claude Code, Grok) | Upstream is Codex-only; factory hosts need install, doctor, and truthful routing | **High** — README, skills, `verify.sh`, host packages | `4e49a82` (PR #1) |
 | Product name Advisor; Sol/Luna is one Codex preset | Upstream product identity is Sol-specific; factory copy and doctor treat any catalog-backed pair as valid | Medium — README, skills, helper usage | `d43610c`, `2744bdd` (PR #9) |
-| Repo slug `atebites-hub/advisor` | GitHub renamed this fork; workflow `github.repository` and origin URL must match. Package id stays `sol-advisor` | Medium — README, workflows, homepage URLs | `d43610c`, `74b66bf` (PR #9) |
+| Repo slug `atebites-hub/advisor` | GitHub renamed this fork; origin URL must match. Package id stays `sol-advisor`. No Actions workflow remains to gate on `github.repository` | Medium — README, homepage URLs | `d43610c`, `74b66bf` (PR #9) |
 | Isolated host model choices | Doctor/apply report catalog-backed pairs; they do not copy values into host model or provider settings | Medium — doctor, README, helper | `c32abf2` (PR #16) |
 | Claude native-first seating | Claude has a native advisor tool (`/advisor`, `advisorModel`, `--advisor`), distinct from opusplan and ultracode. Doctor reports configured intent without claiming runtime proof and never overlays Codex strict seating. Defer is not skip-ODW. | Medium — README, doctor, Claude skill copy | `74b66bf` (PR #9), `c32abf2` (PR #16) |
 | Native-first with ODW alignment | Prefer ultracode / ultra / multitask when those are the right tool; ODW must still align (detect, do not fight, compose or defer). Alignment is required design and unproven. Native-first does not mean skip ODW. Cursor investigation is alignment, not “ODW unused.” | Medium — README, `odw.md`, operations | `4fcf5ed` (PR #10) |
@@ -78,7 +78,7 @@ the deferral here.
 | Automatic session activation | Inject orchestration contract at session start on supported hosts | Medium — hooks and prompt copy | `6fa9aac`, `17dba52` |
 | Bounded grunt enforcement / ordinary-tool continuity | One bounded grunt when useful; solo tools stay available outside Advisor routing | Medium — spawn guards and verifier isolation | `7416c9a`, `60432dd` (PR #4), `aad5fe1` (PR #5) |
 | Fork-maintenance docs | `UPSTREAM.md`; keep the GitHub fork relationship. Weekday `.github/workflows/sync-upstream.yml` was removed after daily failures from 2026-10-02 | Low — docs only | `f6f4fb8` (PR #7) |
-| Weekly Actions artifact cleanup | Delete artifacts older than 3 days (`cleanup-artifacts.yml`) | Low — workflow only | `d43e860` (PR #8) |
+| Weekly Actions artifact cleanup | `.github/workflows/cleanup-artifacts.yml` was removed (Monday cron that deleted artifacts older than 3 days). Do not restore it | Low — docs only | `d43e860` (PR #8) |
 | atebites-hub marketplace catalogs | Install origin is this fork (`atebites-hub/advisor`), not `DannyMac180/sol-advisor` | Low — catalog JSON only | `f0f1257` |
 
 Non-merge factory commits (newest first):
@@ -188,5 +188,5 @@ is no longer referenced.
 - [ ] `sh plugins/sol-advisor/scripts/verify.sh` and `git diff --check`
 - [ ] This file’s last-synced SHA matches `upstream/main`
 - [ ] Fork still `fork: true` with parent `DannyMac180/sol-advisor`
-- [ ] Origin URL and workflow `github.repository` still `atebites-hub/advisor`
+- [ ] Origin URL still `atebites-hub/advisor`
 - [ ] No marketplace pin bumps in the sync PR
